@@ -29,6 +29,9 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
+      <a href="http://localhost:5000/sample-route">Go to sample route.</a>
+      <br />
+      <a href="http://localhost:5000/user">Go to user route.</a>
     </div>
   );
 }
