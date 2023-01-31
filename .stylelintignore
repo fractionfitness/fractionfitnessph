@@ -1,0 +1,14 @@
+# ignores all node_modules dir in any level | there are no css files in node_modules
+**/node_modules/
+
+# ignores all build and dist dir in any level
+**/build/
+**/dist/
+
+# stylelint uses gitignore syntax w/c can't handle ! so use ignoreFiles (in .stylelintrc.js) field for the ff. rules:
+
+# ignores all file extensions that are not css
+# **/*.!(css|scss|sass)
+
+# ignores all files that have no extensions (e.g. LICENSE)
+# **/!(*.*)

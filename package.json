@@ -1,0 +1,60 @@
+{
+  "name": "fractionfitnessph",
+  "version": "1.0.0",
+  "description": "Fraction Fitness Main Site",
+  "main": "index.js",
+  "scripts": {
+    "api": "npm run dev --prefix api",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run api\" \"npm run client\"",
+    "eslint": "npx eslint --cache '**/*.+(js)'",
+    "stylelint": "npx stylelint --cache '**/*.{css,scss,sass}'",
+    "lint": "npx concurrently 'npm run eslint' 'npm run stylelint'",
+    "lint:fix": "npx concurrently 'npm run eslint -- --fix' 'npm run stylelint -- --fix'",
+    "prettier": "npx prettier '**/*.+(js|css|scss|sass|md)' --check",
+    "prettier:fix": "npm run prettier -- --write",
+    "prepare": "node -e \"try { require('husky').install() } catch (e) {if (e.code !== 'MODULE_NOT_FOUND') throw e}\" && husky install && npx husky set .husky/pre-commit 'npx lint-staged'"
+  },
+  "lint-staged": {
+    "*.+(js)": [
+      "npx eslint --cache --fix",
+      "npx prettier --write"
+    ],
+    "*.+(css|scss|sass)": [
+      "npx stylelint --cache --fix",
+      "npx prettier --write"
+    ],
+    "*.+(md)": [
+      "npx prettier --write"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fractionfitness/fractionfitnessph.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fractionfitness/fractionfitnessph/issues"
+  },
+  "homepage": "https://github.com/fractionfitness/fractionfitnessph#readme",
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "eslint": "^8.33.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-node": "^4.1.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-node": "^11.1.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.1.0",
+    "prettier": "^2.8.3",
+    "stylelint": "^14.16.1",
+    "stylelint-config-prettier-scss": "^0.0.1",
+    "stylelint-config-standard": "^29.0.0",
+    "stylelint-config-standard-scss": "^6.1.0",
+    "stylelint-config-syzygy-bem": "^2.0.2",
+    "stylelint-selector-bem-pattern": "^2.1.1"
+  }
+}

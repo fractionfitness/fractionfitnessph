@@ -1,0 +1,11 @@
+# ignore all files in node_modules, located in all directories
+**/node_modules/**
+
+# ignore all files in dist/, where dist/ is located in any subdirectory
+**/dist/**
+
+# ignore all files in build/, where build/ is located in any subdirectory
+**/build/**
+
+# ignore vite config in any directory
+**/vite.config.js
