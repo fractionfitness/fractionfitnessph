@@ -31,7 +31,8 @@ function App() {
       </p>
       <a href="/api/sample-route">Go to sample route.</a>
       <br />
-      <a href="/api/user">Go to user route.</a>
+      <a href="/api/users">Go to users route.</a>
+      <p>(Individual user route is accessible at &quot;/api/user/:id&quot;)</p>
     </div>
   );
 }
