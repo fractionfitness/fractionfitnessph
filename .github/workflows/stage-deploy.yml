@@ -1,0 +1,115 @@
+name: Staging Deployment Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev, feat/no-ref/cicd-setup, test/**/*]
+  pull_request:
+    branches: [dev, feat/no-ref/cicd-setup, test-pr]
+    types: [opened]
+
+env:
+  NODE_VERSION: 18.13.0
+
+jobs:
+  # separate lint job into a CI Pipeline (with lint and test)
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Install NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./node_modules
+            ./client/node_modules
+            ./api/node_modules
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          npm ci --prefix .
+          npm ci --prefix ./client
+          npm ci --prefix ./api
+      - name: Lint code
+        run: npm run lint
+      # add test steps here
+      # - name: Test code
+      #   run: |
+      #     npm run test --prefix ./client
+      #     npm run test --prefix ./api
+
+  build-push:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      # - name: Cache dependencies
+      #   id: cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ./client/node_modules
+      #       ./api/node_modules
+      #     key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+      - name: Build and push image to ghcr.io
+        run: |
+          docker compose -f docker-compose.stage.yml build api
+          docker images
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+          docker push ghcr.io/${{ github.repository_owner }}/fractionfitnessph-api
+      - name: check current dir path
+        run: pwd
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-compose-file
+          path: |
+            docker-compose.stage.yml
+
+  deploy-staging:
+    needs: build-push
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-compose-file
+          path: ./fractionfitnessph
+      - name: transfer files
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DO_DROPLET_IP_ADD }}
+          # host: ${{ secrets.DO_DROPLET_DOMAIN }}
+          username: ${{ secrets.DO_DROPLET_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          # password: ${{ secrets.PASSWORD }}
+          # port: ${{ secrets.PORT }}
+          source: './fractionfitnessph'
+          target: '~/'
+      - name: run docker compose
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DO_DROPLET_IP_ADD }}
+          # host: ${{ secrets.DO_DROPLET_DOMAIN }}
+          username: ${{ secrets.DO_DROPLET_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd ~/fractionfitnessph
+            docker compose -f docker-compose.stage.yml down
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+            docker compose -f docker-compose.stage.yml pull api
+            docker compose -f docker-compose.stage.yml up -d
+            docker ps -a
