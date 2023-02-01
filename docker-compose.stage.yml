@@ -1,0 +1,23 @@
+version: '3'
+services:
+  postgres:
+    restart: always
+    image: 'postgres:15.1-bullseye'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+    ports:
+      - '5432:5432'
+  api:
+    depends_on:
+      postgres:
+        condition: service_started
+    restart: always
+    image: 'ghcr.io/fractionfitness/fractionfitnessph-api'
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/postgres?schema=public
+    ports:
+      - '5000:5000'
+    command: sh -c './init_postgres_dev.sh && exec dumb-init node index.js'
