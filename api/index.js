@@ -2,7 +2,8 @@ const express = require('express');
 
 const app = express();
 
-require('./routes/sampleRoutes')(app);
+require('./routes/sample')(app);
+require('./routes/user')(app);
 
 if (process.env.NODE_ENV === 'production') {
   console.log('NODE_ENV', process.env.NODE_ENV);
