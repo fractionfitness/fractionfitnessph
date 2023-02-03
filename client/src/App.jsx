@@ -33,6 +33,7 @@ function App() {
       <br />
       <a href="/api/users">Go to users route.</a>
       <p>(Individual user route is accessible at &quot;/api/user/:id&quot;)</p>
+      <p>Testing CICD Pipeline</p>
     </div>
   );
 }
