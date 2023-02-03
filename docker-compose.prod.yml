@@ -1,0 +1,9 @@
+version: '3'
+services:
+  api:
+    restart: always
+    image: 'ghcr.io/fractionfitness/fractionfitnessph-api:latest'
+    environment:
+      - DATABASE_URL=postgresql://${FRACTION_DB_USER}:${FRACTION_DB_PWORD}@${FRACTION_DB_HOST}/${FRACTION_DB_NAME}?schema=public
+    ports:
+      - '$API_PORT:5000'
