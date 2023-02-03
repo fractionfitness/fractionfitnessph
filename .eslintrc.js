@@ -39,13 +39,15 @@ module.exports = {
     'node/no-unpublished-require': 'off', // not publishing this app so rule not needed
     'import/no-extraneous-dependencies': 'warn',
     'node/no-missing-import': [
-      'error',
+      'warn',
       {
         // allowModules: [],
         // resolvePaths: ['/path/to/a/modules/directory'],
         tryExtensions: ['.js', '.jsx', '.json', '.node'],
       },
     ],
+    'import/no-unresolved': 'warn',
+    'node/no-missing-require': 'warn',
     // 'import/extensions': [
     //   'error',
     //   'ignorePackages',
