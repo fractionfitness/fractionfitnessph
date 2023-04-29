@@ -1,0 +1,11 @@
+# prettier ignores the ff. by default
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+
+# additional files to ignore
+**/*.html
+
+# next.js files
+**/.next
