@@ -6,11 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "seed:generate": "ts-node -P tsconfig-seed.json -r tsconfig-paths/register --transpileOnly prisma/seedInputs.ts",
     "db": "docker compose up -d",
     "db:down": "docker compose down",
+    "db:reset": "prisma db push && prisma db seed",
     "lint": "next lint",
     "format": "prettier '**/*.{js,jsx,cjs,ts,tsx,css,scss,sass,md}' --cache --write",
     "prepare": "husky install"
+  },
+  "prisma": {
+    "seed": "ts-node -P tsconfig-seed.json -r tsconfig-paths/register --transpileOnly prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^4.15.0",
@@ -18,6 +23,7 @@
     "@types/react": "18.2.8",
     "@types/react-dom": "18.2.4",
     "autoprefixer": "10.4.14",
+    "bcrypt": "^5.1.0",
     "eslint": "8.42.0",
     "eslint-config-next": "13.4.4",
     "next": "13.4.4",
@@ -28,9 +34,12 @@
     "typescript": "5.1.3"
   },
   "devDependencies": {
+    "@faker-js/faker": "^8.0.2",
     "husky": "^8.0.3",
     "lint-staged": "^13.2.2",
     "prettier": "^2.8.8",
-    "prisma": "^4.15.0"
+    "prisma": "^4.15.0",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0"
   }
 }
