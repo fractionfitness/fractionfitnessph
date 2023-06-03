@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "db": "docker compose up -d",
+    "db:down": "docker compose down",
     "lint": "next lint",
     "format": "prettier '**/*.{js,jsx,cjs,ts,tsx,css,scss,sass,md}' --cache --write",
     "prepare": "husky install"
