@@ -1,0 +1,987 @@
+{
+  "users": [
+    { "id": 1, "email": "Elna_Bartell@gmail.com", "password": "wujeq" },
+    { "id": 2, "email": "Monserrat_Hirthe@gmail.com", "password": "jakaz" },
+    { "id": 3, "email": "Corine_Prosacco67@gmail.com", "password": "gunem" },
+    { "id": 4, "email": "Peyton_Champlin@gmail.com", "password": "dahah" },
+    { "id": 5, "email": "Britney.Glover39@hotmail.com", "password": "womem" },
+    { "id": 6, "email": "Aurelia82@hotmail.com", "password": "zucol" },
+    { "id": 7, "email": "Roxane_Hoppe62@gmail.com" },
+    { "id": 8, "email": "Pansy21@gmail.com", "password": "pefaw" },
+    { "id": 9, "email": "Emmet.Rosenbaum32@yahoo.com", "password": "kuluw" },
+    { "id": 10, "email": "Mikayla.Padberg99@yahoo.com" },
+    { "id": 11, "email": "Kurt83@gmail.com" },
+    { "id": 12, "email": "Herminio24@hotmail.com", "password": "nokuq" },
+    { "id": 13, "email": "Alvina63@gmail.com" },
+    { "id": 14, "email": "Norbert_Bogan53@hotmail.com" },
+    { "id": 15, "email": "Katelynn_Morissette@yahoo.com", "password": "mizon" },
+    { "id": 16, "email": "Antwan_Kertzmann@hotmail.com" },
+    {
+      "id": 17,
+      "email": "Peyton_Watsica-Corkery@gmail.com",
+      "password": "pacah"
+    },
+    { "id": 18, "email": "Clint.Block@gmail.com" },
+    { "id": 19, "email": "Madalyn.Wolf@yahoo.com", "password": "kuwer" },
+    { "id": 20, "email": "Jany_Hagenes@hotmail.com", "password": "peyen" }
+  ],
+  "userProfiles": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "first_name": "Nora",
+      "middle_name": "Shiloh",
+      "last_name": "Keebler",
+      "suffix_name": "MD",
+      "full_name": "NoraShilohKeeblerMD"
+    },
+    {
+      "id": 2,
+      "user_id": 2,
+      "first_name": "Santos",
+      "middle_name": "Ellis",
+      "last_name": "Macejkovic",
+      "suffix_name": "II",
+      "full_name": "SantosEllisMacejkovicII"
+    },
+    {
+      "id": 3,
+      "user_id": 3,
+      "first_name": "Austin",
+      "middle_name": "Angel",
+      "last_name": "Ortiz",
+      "suffix_name": "MD",
+      "full_name": "AustinAngelOrtizMD"
+    },
+    {
+      "id": 4,
+      "user_id": 4,
+      "first_name": "Hettie",
+      "middle_name": "Phoenix",
+      "last_name": "Fahey",
+      "suffix_name": "MD",
+      "full_name": "HettiePhoenixFaheyMD"
+    },
+    {
+      "id": 5,
+      "user_id": 5,
+      "first_name": "Gwendolyn",
+      "middle_name": "North",
+      "last_name": "Stehr",
+      "suffix_name": "IV",
+      "full_name": "GwendolynNorthStehrIV"
+    },
+    {
+      "id": 6,
+      "user_id": 6,
+      "first_name": "Elva",
+      "middle_name": "Rory",
+      "last_name": "Hilpert",
+      "suffix_name": "DVM",
+      "full_name": "ElvaRoryHilpertDVM"
+    },
+    {
+      "id": 7,
+      "user_id": 7,
+      "first_name": "Loma",
+      "middle_name": "Sasha",
+      "last_name": "Murray",
+      "suffix_name": "DDS",
+      "full_name": "LomaSashaMurrayDDS"
+    },
+    {
+      "id": 8,
+      "user_id": 8,
+      "first_name": "Dusty",
+      "middle_name": "Billie",
+      "last_name": "Okuneva",
+      "suffix_name": "V",
+      "full_name": "DustyBillieOkunevaV"
+    },
+    {
+      "id": 9,
+      "user_id": 9,
+      "first_name": "Althea",
+      "middle_name": "Jules",
+      "last_name": "O'Keefe",
+      "suffix_name": "I",
+      "full_name": "AltheaJulesO'KeefeI"
+    },
+    {
+      "id": 10,
+      "user_id": 10,
+      "first_name": "Kirsten",
+      "middle_name": "Addison",
+      "last_name": "Paucek",
+      "suffix_name": "I",
+      "full_name": "KirstenAddisonPaucekI"
+    },
+    {
+      "id": 11,
+      "user_id": 11,
+      "first_name": "Jaydon",
+      "middle_name": "London",
+      "last_name": "Kunde",
+      "suffix_name": "IV",
+      "full_name": "JaydonLondonKundeIV"
+    },
+    {
+      "id": 12,
+      "user_id": 12,
+      "first_name": "Horacio",
+      "middle_name": "Rory",
+      "last_name": "Rodriguez",
+      "suffix_name": "II",
+      "full_name": "HoracioRoryRodriguezII"
+    },
+    {
+      "id": 13,
+      "user_id": 13,
+      "first_name": "Mya",
+      "middle_name": "Kai",
+      "last_name": "Bergnaum",
+      "suffix_name": "III",
+      "full_name": "MyaKaiBergnaumIII"
+    },
+    {
+      "id": 14,
+      "user_id": 14,
+      "first_name": "Dejah",
+      "middle_name": "Angel",
+      "last_name": "Medhurst",
+      "suffix_name": "IV",
+      "full_name": "DejahAngelMedhurstIV"
+    },
+    {
+      "id": 15,
+      "user_id": 15,
+      "first_name": "Armando",
+      "middle_name": "Greer",
+      "last_name": "Dicki",
+      "suffix_name": "IV",
+      "full_name": "ArmandoGreerDickiIV"
+    },
+    {
+      "id": 16,
+      "user_id": 16,
+      "first_name": "Destini",
+      "middle_name": "Avery",
+      "last_name": "Cremin",
+      "suffix_name": "Sr.",
+      "full_name": "DestiniAveryCreminSr."
+    },
+    {
+      "id": 17,
+      "user_id": 17,
+      "first_name": "Christelle",
+      "middle_name": "Robin",
+      "last_name": "Considine",
+      "suffix_name": "V",
+      "full_name": "ChristelleRobinConsidineV"
+    },
+    {
+      "id": 18,
+      "user_id": 18,
+      "first_name": "Mortimer",
+      "middle_name": "Sasha",
+      "last_name": "Dickinson",
+      "suffix_name": "IV",
+      "full_name": "MortimerSashaDickinsonIV"
+    },
+    {
+      "id": 19,
+      "user_id": 19,
+      "first_name": "Sigrid",
+      "middle_name": "Dakota",
+      "last_name": "Bode",
+      "suffix_name": "DDS",
+      "full_name": "SigridDakotaBodeDDS"
+    },
+    {
+      "id": 20,
+      "user_id": 20,
+      "first_name": "Coralie",
+      "middle_name": "Dakota",
+      "last_name": "Skiles-Strosin",
+      "suffix_name": "Jr.",
+      "full_name": "CoralieDakotaSkiles-StrosinJr."
+    }
+  ],
+  "groupsAndProfiles": [
+    {
+      "id": 1,
+      "name": "fraction fitness",
+      "profile": { "id": 1, "type": "gym", "country": "Philippines" },
+      "owner_id": 15
+    },
+    {
+      "id": 2,
+      "name": "fraction jiu jitsu",
+      "profile": { "id": 2, "type": "jiu jitsu", "country": "Philippines" },
+      "owner_id": 14
+    },
+    {
+      "id": 3,
+      "name": "fraction gymnastics",
+      "profile": { "id": 3, "type": "gymnastics", "country": "Philippines" },
+      "owner_id": 11
+    }
+  ],
+  "sessions": [
+    {
+      "id": 1,
+      "group_id": 3,
+      "name": "Gymnastics Sat",
+      "day": "SATURDAY",
+      "start_at": "1970-01-01T09:00:00.000+08:00",
+      "end_at": "1970-01-01T10:30:00.000+08:00"
+    },
+    {
+      "id": 2,
+      "group_id": 2,
+      "name": "Adults Morning",
+      "day": "MONDAY",
+      "start_at": "1970-01-01T09:30:00.000Z",
+      "end_at": "1970-01-01T11:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "group_id": 2,
+      "name": "Adults Morning",
+      "day": "TUESDAY",
+      "start_at": "1970-01-01T09:30:00.000Z",
+      "end_at": "1970-01-01T11:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "group_id": 2,
+      "name": "Adults Morning",
+      "day": "THURSDAY",
+      "start_at": "1970-01-01T09:30:00.000Z",
+      "end_at": "1970-01-01T11:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "group_id": 2,
+      "name": "Adults & Minors Lvl 3 Weekday Afternoon",
+      "day": "MONDAY",
+      "start_at": "1970-01-01T17:30:00.000Z",
+      "end_at": "1970-01-01T18:30:00.000Z"
+    },
+    {
+      "id": 6,
+      "group_id": 2,
+      "name": "Adults & Minors Lvl 3 Weekday Afternoon",
+      "day": "WEDNESDAY",
+      "start_at": "1970-01-01T17:30:00.000Z",
+      "end_at": "1970-01-01T18:30:00.000Z"
+    },
+    {
+      "id": 7,
+      "group_id": 2,
+      "name": "Adults & Minors Lvl 3 Weekday Afternoon - No Gi",
+      "day": "FRIDAY",
+      "start_at": "1970-01-01T17:30:00.000Z",
+      "end_at": "1970-01-01T18:30:00.000Z"
+    },
+    {
+      "id": 8,
+      "group_id": 2,
+      "name": "Adults Evening",
+      "day": "MONDAY",
+      "start_at": "1970-01-01T19:30:00.000Z",
+      "end_at": "1970-01-01T21:30:00.000Z"
+    },
+    {
+      "id": 9,
+      "group_id": 2,
+      "name": "Adults Evening",
+      "day": "TUESDAY",
+      "start_at": "1970-01-01T19:30:00.000Z",
+      "end_at": "1970-01-01T21:30:00.000Z"
+    },
+    {
+      "id": 10,
+      "group_id": 2,
+      "name": "Adults Evening",
+      "day": "WEDNESDAY",
+      "start_at": "1970-01-01T19:30:00.000Z",
+      "end_at": "1970-01-01T21:30:00.000Z"
+    },
+    {
+      "id": 11,
+      "group_id": 2,
+      "name": "Adults Evening - No Gi",
+      "day": "THURSDAY",
+      "start_at": "1970-01-01T19:30:00.000Z",
+      "end_at": "1970-01-01T21:30:00.000Z"
+    },
+    {
+      "id": 12,
+      "group_id": 2,
+      "name": "Adults & Minors Lvl 3 Evening",
+      "day": "FRIDAY",
+      "start_at": "1970-01-01T19:30:00.000Z",
+      "end_at": "1970-01-01T21:30:00.000Z"
+    },
+    {
+      "id": 13,
+      "group_id": 2,
+      "name": "Adults Sat",
+      "day": "SATURDAY",
+      "start_at": "1970-01-01T14:30:00.000Z",
+      "end_at": "1970-01-01T16:30:00.000Z"
+    },
+    {
+      "id": 14,
+      "group_id": 2,
+      "name": "Adults & Minors Level 1 & 2 Sun",
+      "day": "SUNDAY",
+      "start_at": "1970-01-01T16:30:00.000Z",
+      "end_at": "1970-01-01T18:00:00.000Z"
+    },
+    {
+      "id": 15,
+      "group_id": 2,
+      "name": "Minors Lvl 1 Fri",
+      "day": "FRIDAY",
+      "start_at": "1970-01-01T16:30:00.000Z",
+      "end_at": "1970-01-01T17:30:00.000Z"
+    },
+    {
+      "id": 16,
+      "group_id": 2,
+      "name": "Minors Lvl 1 Sat",
+      "day": "SATURDAY",
+      "start_at": "1970-01-01T13:00:00.000Z",
+      "end_at": "1970-01-01T14:30:00.000Z"
+    },
+    {
+      "id": 17,
+      "group_id": 2,
+      "name": "Minors Lvl 3 Weekday",
+      "day": "MONDAY",
+      "start_at": "1970-01-01T17:30:00.000Z",
+      "end_at": "1970-01-01T18:30:00.000Z"
+    },
+    {
+      "id": 18,
+      "group_id": 2,
+      "name": "Minors Lvl 3 Weekday",
+      "day": "WEDNESDAY",
+      "start_at": "1970-01-01T17:30:00.000Z",
+      "end_at": "1970-01-01T18:30:00.000Z"
+    },
+    {
+      "id": 19,
+      "group_id": 2,
+      "name": "Minors Lvl 2 & 3 Weekday - No Gi",
+      "day": "FRIDAY",
+      "start_at": "1970-01-01T17:30:00.000Z",
+      "end_at": "1970-01-01T18:30:00.000Z"
+    },
+    {
+      "id": 20,
+      "group_id": 2,
+      "name": "Minors Lvl 2 & 3 Sat",
+      "day": "SATURDAY",
+      "start_at": "1970-01-01T14:30:00.000Z",
+      "end_at": "1970-01-01T16:30:00.000Z"
+    }
+  ],
+  "groupRelations": [
+    { "parent_id": 1, "child_id": 2 },
+    { "parent_id": 1, "child_id": 3 }
+  ],
+  "employees": [
+    { "user_id": 15, "group_id": 1, "role": "OWNER" },
+    { "user_id": 5, "group_id": 1 },
+    { "user_id": 6, "group_id": 1 },
+    { "user_id": 7, "group_id": 1 },
+    { "user_id": 12, "group_id": 1 },
+    { "user_id": 13, "group_id": 1 },
+    { "user_id": 15, "group_id": 1 },
+    { "user_id": 17, "group_id": 1 },
+    { "user_id": 20, "group_id": 1 },
+    { "user_id": 14, "group_id": 2, "role": "OWNER" },
+    { "user_id": 2, "group_id": 2 },
+    { "user_id": 3, "group_id": 2 },
+    { "user_id": 4, "group_id": 2 },
+    { "user_id": 6, "group_id": 2 },
+    { "user_id": 7, "group_id": 2 },
+    { "user_id": 9, "group_id": 2 },
+    { "user_id": 11, "group_id": 2 },
+    { "user_id": 12, "group_id": 2 },
+    { "user_id": 16, "group_id": 2 },
+    { "user_id": 19, "group_id": 2 },
+    { "user_id": 11, "group_id": 3, "role": "OWNER" },
+    { "user_id": 3, "group_id": 3 },
+    { "user_id": 5, "group_id": 3 },
+    { "user_id": 6, "group_id": 3 },
+    { "user_id": 10, "group_id": 3 },
+    { "user_id": 11, "group_id": 3 },
+    { "user_id": 13, "group_id": 3 },
+    { "user_id": 16, "group_id": 3 },
+    { "user_id": 18, "group_id": 3 },
+    { "user_id": 19, "group_id": 3 },
+    { "user_id": 20, "group_id": 3 }
+  ],
+  "members": [
+    { "id": 1, "user_id": 3, "group_id": 1 },
+    { "id": 2, "user_id": 7, "group_id": 1 },
+    { "id": 3, "user_id": 9, "group_id": 1 },
+    { "id": 4, "user_id": 11, "group_id": 1 },
+    { "id": 5, "user_id": 12, "group_id": 1 },
+    { "id": 6, "user_id": 14, "group_id": 1 },
+    { "id": 7, "user_id": 18, "group_id": 1 },
+    { "id": 8, "user_id": 2, "group_id": 2 },
+    { "id": 9, "user_id": 3, "group_id": 2 },
+    { "id": 10, "user_id": 4, "group_id": 2 },
+    { "id": 11, "user_id": 5, "group_id": 2 },
+    { "id": 12, "user_id": 8, "group_id": 2 },
+    { "id": 13, "user_id": 11, "group_id": 2 },
+    { "id": 14, "user_id": 15, "group_id": 2 },
+    { "id": 15, "user_id": 20, "group_id": 2 },
+    { "id": 16, "user_id": 1, "group_id": 3 },
+    { "id": 17, "user_id": 2, "group_id": 3 },
+    { "id": 18, "user_id": 4, "group_id": 3 },
+    { "id": 19, "user_id": 11, "group_id": 3 },
+    { "id": 20, "user_id": 14, "group_id": 3 },
+    { "id": 21, "user_id": 15, "group_id": 3 },
+    { "id": 22, "user_id": 20, "group_id": 3 }
+  ],
+  "checkins": [
+    {
+      "id": 1,
+      "session_id": 2,
+      "member_id": 8,
+      "datetimestamp": "2019-01-10T09:35:17.850Z",
+      "date": "2021-10-22T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "session_id": 12,
+      "member_id": 8,
+      "datetimestamp": "2021-05-02T19:07:51.772Z",
+      "date": "2019-11-07T00:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "session_id": 7,
+      "member_id": 8,
+      "datetimestamp": "2022-08-15T11:51:39.680Z",
+      "date": "2019-03-10T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "session_id": 4,
+      "member_id": 8,
+      "datetimestamp": "2021-02-16T01:06:29.677Z",
+      "date": "2019-04-01T00:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "session_id": 4,
+      "member_id": 8,
+      "datetimestamp": "2022-06-19T22:29:30.488Z",
+      "date": "2019-09-03T00:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "session_id": 2,
+      "member_id": 8,
+      "datetimestamp": "2019-12-21T09:18:08.493Z",
+      "date": "2020-11-24T00:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "session_id": 18,
+      "member_id": 8,
+      "datetimestamp": "2020-08-24T16:50:16.046Z",
+      "date": "2019-02-26T00:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "session_id": 5,
+      "member_id": 8,
+      "datetimestamp": "2022-02-28T13:19:50.787Z",
+      "date": "2019-10-19T00:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "session_id": 5,
+      "member_id": 9,
+      "datetimestamp": "2019-07-25T22:56:17.751Z",
+      "date": "2022-04-23T00:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "session_id": 2,
+      "member_id": 9,
+      "datetimestamp": "2021-04-13T09:30:49.557Z",
+      "date": "2019-12-22T00:00:00.000Z"
+    },
+    {
+      "id": 11,
+      "session_id": 11,
+      "member_id": 9,
+      "datetimestamp": "2019-05-10T06:47:09.007Z",
+      "date": "2020-09-12T00:00:00.000Z"
+    },
+    {
+      "id": 12,
+      "session_id": 2,
+      "member_id": 9,
+      "datetimestamp": "2021-05-08T05:50:29.756Z",
+      "date": "2019-09-12T00:00:00.000Z"
+    },
+    {
+      "id": 13,
+      "session_id": 17,
+      "member_id": 9,
+      "datetimestamp": "2022-02-06T04:00:25.921Z",
+      "date": "2022-05-27T00:00:00.000Z"
+    },
+    {
+      "id": 14,
+      "session_id": 2,
+      "member_id": 10,
+      "datetimestamp": "2020-10-04T17:09:29.421Z",
+      "date": "2021-03-09T00:00:00.000Z"
+    },
+    {
+      "id": 15,
+      "session_id": 4,
+      "member_id": 10,
+      "datetimestamp": "2020-03-08T13:12:37.937Z",
+      "date": "2020-09-24T00:00:00.000Z"
+    },
+    {
+      "id": 16,
+      "session_id": 12,
+      "member_id": 10,
+      "datetimestamp": "2021-08-22T01:53:04.365Z",
+      "date": "2019-02-03T00:00:00.000Z"
+    },
+    {
+      "id": 17,
+      "session_id": 17,
+      "member_id": 11,
+      "datetimestamp": "2022-06-18T09:01:14.890Z",
+      "date": "2021-05-13T00:00:00.000Z"
+    },
+    {
+      "id": 18,
+      "session_id": 17,
+      "member_id": 11,
+      "datetimestamp": "2021-06-19T20:30:51.242Z",
+      "date": "2021-04-16T00:00:00.000Z"
+    },
+    {
+      "id": 19,
+      "session_id": 11,
+      "member_id": 11,
+      "datetimestamp": "2020-07-12T05:45:21.403Z",
+      "date": "2022-01-22T00:00:00.000Z"
+    },
+    {
+      "id": 20,
+      "session_id": 9,
+      "member_id": 11,
+      "datetimestamp": "2021-07-31T19:30:39.763Z",
+      "date": "2021-03-14T00:00:00.000Z"
+    },
+    {
+      "id": 21,
+      "session_id": 8,
+      "member_id": 11,
+      "datetimestamp": "2020-08-09T03:56:13.882Z",
+      "date": "2019-11-16T00:00:00.000Z"
+    },
+    {
+      "id": 22,
+      "session_id": 9,
+      "member_id": 12,
+      "datetimestamp": "2021-06-05T15:19:38.073Z",
+      "date": "2022-09-22T00:00:00.000Z"
+    },
+    {
+      "id": 23,
+      "session_id": 13,
+      "member_id": 12,
+      "datetimestamp": "2019-03-18T05:12:46.161Z",
+      "date": "2022-05-19T00:00:00.000Z"
+    },
+    {
+      "id": 24,
+      "session_id": 2,
+      "member_id": 12,
+      "datetimestamp": "2021-04-09T21:29:03.485Z",
+      "date": "2019-05-15T00:00:00.000Z"
+    },
+    {
+      "id": 25,
+      "session_id": 3,
+      "member_id": 12,
+      "datetimestamp": "2020-08-25T06:16:21.184Z",
+      "date": "2019-05-23T00:00:00.000Z"
+    },
+    {
+      "id": 26,
+      "session_id": 20,
+      "member_id": 12,
+      "datetimestamp": "2021-01-03T05:56:12.013Z",
+      "date": "2019-12-16T00:00:00.000Z"
+    },
+    {
+      "id": 27,
+      "session_id": 6,
+      "member_id": 12,
+      "datetimestamp": "2021-01-12T11:37:36.050Z",
+      "date": "2019-09-23T00:00:00.000Z"
+    },
+    {
+      "id": 28,
+      "session_id": 11,
+      "member_id": 12,
+      "datetimestamp": "2019-12-11T04:18:27.780Z",
+      "date": "2021-01-21T00:00:00.000Z"
+    },
+    {
+      "id": 29,
+      "session_id": 14,
+      "member_id": 12,
+      "datetimestamp": "2021-04-14T14:49:29.863Z",
+      "date": "2021-09-17T00:00:00.000Z"
+    },
+    {
+      "id": 30,
+      "session_id": 7,
+      "member_id": 12,
+      "datetimestamp": "2022-06-09T22:40:51.172Z",
+      "date": "2021-06-07T00:00:00.000Z"
+    },
+    {
+      "id": 31,
+      "session_id": 13,
+      "member_id": 13,
+      "datetimestamp": "2021-09-25T12:51:28.436Z",
+      "date": "2021-07-01T00:00:00.000Z"
+    },
+    {
+      "id": 32,
+      "session_id": 9,
+      "member_id": 13,
+      "datetimestamp": "2021-09-04T15:45:49.087Z",
+      "date": "2019-04-14T00:00:00.000Z"
+    },
+    {
+      "id": 33,
+      "session_id": 16,
+      "member_id": 13,
+      "datetimestamp": "2019-01-21T07:17:16.616Z",
+      "date": "2021-01-08T00:00:00.000Z"
+    },
+    {
+      "id": 34,
+      "session_id": 10,
+      "member_id": 13,
+      "datetimestamp": "2022-01-04T04:57:05.820Z",
+      "date": "2022-09-24T00:00:00.000Z"
+    },
+    {
+      "id": 35,
+      "session_id": 18,
+      "member_id": 14,
+      "datetimestamp": "2020-09-19T22:43:28.598Z",
+      "date": "2022-12-24T00:00:00.000Z"
+    },
+    {
+      "id": 36,
+      "session_id": 6,
+      "member_id": 14,
+      "datetimestamp": "2022-05-26T00:18:17.191Z",
+      "date": "2019-06-01T00:00:00.000Z"
+    },
+    {
+      "id": 37,
+      "session_id": 15,
+      "member_id": 14,
+      "datetimestamp": "2021-08-03T01:24:04.892Z",
+      "date": "2021-07-25T00:00:00.000Z"
+    },
+    {
+      "id": 38,
+      "session_id": 19,
+      "member_id": 14,
+      "datetimestamp": "2019-07-10T08:29:15.750Z",
+      "date": "2022-10-26T00:00:00.000Z"
+    },
+    {
+      "id": 39,
+      "session_id": 19,
+      "member_id": 15,
+      "datetimestamp": "2020-03-27T22:11:33.258Z",
+      "date": "2021-07-16T00:00:00.000Z"
+    },
+    {
+      "id": 40,
+      "session_id": 2,
+      "member_id": 15,
+      "datetimestamp": "2020-03-27T23:51:27.578Z",
+      "date": "2020-07-11T00:00:00.000Z"
+    },
+    {
+      "id": 41,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2021-03-13T16:59:48.825Z",
+      "date": "2021-06-20T00:00:00.000Z"
+    },
+    {
+      "id": 42,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2020-08-20T15:50:13.709Z",
+      "date": "2021-09-28T00:00:00.000Z"
+    },
+    {
+      "id": 43,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2022-06-02T20:41:08.835Z",
+      "date": "2021-08-18T00:00:00.000Z"
+    },
+    {
+      "id": 44,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2021-02-04T14:16:24.833Z",
+      "date": "2022-08-20T00:00:00.000Z"
+    },
+    {
+      "id": 45,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2019-08-07T21:16:11.468Z",
+      "date": "2021-07-25T00:00:00.000Z"
+    },
+    {
+      "id": 46,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2020-10-24T19:29:33.388Z",
+      "date": "2020-09-07T00:00:00.000Z"
+    },
+    {
+      "id": 47,
+      "session_id": 1,
+      "member_id": 16,
+      "datetimestamp": "2019-02-18T03:40:05.831Z",
+      "date": "2021-10-20T00:00:00.000Z"
+    },
+    {
+      "id": 48,
+      "session_id": 1,
+      "member_id": 17,
+      "datetimestamp": "2021-10-11T00:08:21.884Z",
+      "date": "2022-12-10T00:00:00.000Z"
+    },
+    {
+      "id": 49,
+      "session_id": 1,
+      "member_id": 17,
+      "datetimestamp": "2019-05-19T20:43:19.026Z",
+      "date": "2020-04-27T00:00:00.000Z"
+    },
+    {
+      "id": 50,
+      "session_id": 1,
+      "member_id": 18,
+      "datetimestamp": "2022-01-11T03:31:11.435Z",
+      "date": "2019-05-10T00:00:00.000Z"
+    },
+    {
+      "id": 51,
+      "session_id": 1,
+      "member_id": 18,
+      "datetimestamp": "2021-09-17T04:29:32.815Z",
+      "date": "2021-02-27T00:00:00.000Z"
+    },
+    {
+      "id": 52,
+      "session_id": 1,
+      "member_id": 18,
+      "datetimestamp": "2019-05-11T15:51:29.216Z",
+      "date": "2019-05-24T00:00:00.000Z"
+    },
+    {
+      "id": 53,
+      "session_id": 1,
+      "member_id": 18,
+      "datetimestamp": "2021-01-23T17:13:27.354Z",
+      "date": "2019-04-25T00:00:00.000Z"
+    },
+    {
+      "id": 54,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2019-11-08T17:16:34.985Z",
+      "date": "2020-03-28T00:00:00.000Z"
+    },
+    {
+      "id": 55,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2020-12-13T02:03:33.410Z",
+      "date": "2021-10-20T00:00:00.000Z"
+    },
+    {
+      "id": 56,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2022-08-02T07:49:56.614Z",
+      "date": "2020-04-14T00:00:00.000Z"
+    },
+    {
+      "id": 57,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2021-05-25T08:47:53.256Z",
+      "date": "2022-03-03T00:00:00.000Z"
+    },
+    {
+      "id": 58,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2020-07-17T08:07:40.917Z",
+      "date": "2022-11-27T00:00:00.000Z"
+    },
+    {
+      "id": 59,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2020-07-28T07:01:43.298Z",
+      "date": "2020-03-23T00:00:00.000Z"
+    },
+    {
+      "id": 60,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2021-02-09T20:05:34.856Z",
+      "date": "2020-04-24T00:00:00.000Z"
+    },
+    {
+      "id": 61,
+      "session_id": 1,
+      "member_id": 19,
+      "datetimestamp": "2020-09-07T05:25:40.238Z",
+      "date": "2021-01-03T00:00:00.000Z"
+    },
+    {
+      "id": 62,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2022-05-14T12:10:15.322Z",
+      "date": "2020-01-15T00:00:00.000Z"
+    },
+    {
+      "id": 63,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2020-09-08T17:34:29.708Z",
+      "date": "2022-01-17T00:00:00.000Z"
+    },
+    {
+      "id": 64,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2021-10-13T06:31:01.945Z",
+      "date": "2019-07-02T00:00:00.000Z"
+    },
+    {
+      "id": 65,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2019-07-05T13:04:24.172Z",
+      "date": "2019-04-27T00:00:00.000Z"
+    },
+    {
+      "id": 66,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2022-08-18T22:20:51.245Z",
+      "date": "2021-07-01T00:00:00.000Z"
+    },
+    {
+      "id": 67,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2019-08-02T21:53:24.223Z",
+      "date": "2021-11-08T00:00:00.000Z"
+    },
+    {
+      "id": 68,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2019-08-08T14:50:09.182Z",
+      "date": "2022-07-20T00:00:00.000Z"
+    },
+    {
+      "id": 69,
+      "session_id": 1,
+      "member_id": 20,
+      "datetimestamp": "2022-02-26T04:51:02.430Z",
+      "date": "2021-11-25T00:00:00.000Z"
+    },
+    {
+      "id": 70,
+      "session_id": 1,
+      "member_id": 21,
+      "datetimestamp": "2019-12-15T09:58:40.477Z",
+      "date": "2021-12-26T00:00:00.000Z"
+    },
+    {
+      "id": 71,
+      "session_id": 1,
+      "member_id": 21,
+      "datetimestamp": "2021-07-14T14:21:30.247Z",
+      "date": "2022-05-22T00:00:00.000Z"
+    },
+    {
+      "id": 72,
+      "session_id": 1,
+      "member_id": 21,
+      "datetimestamp": "2021-09-23T01:46:34.295Z",
+      "date": "2022-07-25T00:00:00.000Z"
+    },
+    {
+      "id": 73,
+      "session_id": 1,
+      "member_id": 21,
+      "datetimestamp": "2019-01-11T08:32:15.392Z",
+      "date": "2022-06-13T00:00:00.000Z"
+    },
+    {
+      "id": 74,
+      "session_id": 1,
+      "member_id": 22,
+      "datetimestamp": "2020-02-22T05:13:40.435Z",
+      "date": "2021-09-03T00:00:00.000Z"
+    },
+    {
+      "id": 75,
+      "session_id": 1,
+      "member_id": 22,
+      "datetimestamp": "2022-08-15T04:15:48.992Z",
+      "date": "2021-05-10T00:00:00.000Z"
+    },
+    {
+      "id": 76,
+      "session_id": 1,
+      "member_id": 22,
+      "datetimestamp": "2022-02-20T07:16:24.028Z",
+      "date": "2019-04-02T00:00:00.000Z"
+    }
+  ]
+}
