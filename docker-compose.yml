@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:8-debian
+    restart: always
+    environment:
+      - MYSQL_DATABASE=localdevdb
+      - MYSQL_ROOT_PASSWORD=pword
+    ports:
+      - '3306:3306'
