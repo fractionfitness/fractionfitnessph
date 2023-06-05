@@ -20,7 +20,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      // "@/*": ["./src/*"], // create-next-app configuration
+      // "@/*": ["./*"], // using this alone eliminates the need for all paths below
+      "@/src/*": ["./src/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/components/*": ["./components/*"],
+      "@/public/*": ["./public/*"]
     },
     "strictNullChecks": true
   },
