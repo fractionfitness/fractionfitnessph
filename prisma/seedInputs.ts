@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { faker } from '@faker-js/faker';
+import { hashSync } from 'bcrypt';
+
 import { generateRandomDateTimeString } from './seedUtils';
 
 const p = path.join(
@@ -187,7 +189,8 @@ function generateFakeModelDataArrays() {
     id: index + 1,
     email: faker.internet.email(),
     password: faker.helpers.maybe(
-      () => faker.internet.password({ length: 5, memorable: true }),
+      () =>
+        hashSync(faker.internet.password({ length: 5, memorable: true }), 12),
       { probability: 0.6 },
     ),
   }));
