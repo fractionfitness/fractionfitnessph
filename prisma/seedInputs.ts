@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { faker } from '@faker-js/faker';
-import { hashSync } from 'bcrypt';
+// import { hashSync } from 'bcrypt';
 
 import { generateRandomDateTimeString } from './seedUtils';
+import { hashPassword } from '@/lib/auth';
 
 const p = path.join(
   path.dirname(require.main.filename),
@@ -184,16 +185,66 @@ const sessionData = {
 };
 //////////////////////////////////////////////////////////////////////////////
 
-function generateFakeModelDataArrays() {
-  const users = Array.from({ length: userArrLength }).map((_, index) => ({
-    id: index + 1,
-    email: faker.internet.email(),
-    password: faker.helpers.maybe(
-      () =>
-        hashSync(faker.internet.password({ length: 5, memorable: true }), 12),
-      { probability: 0.6 },
-    ),
-  }));
+async function generateFakeModelDataArrays() {
+  // sync hashing of password
+  // const users = Array.from({ length: userArrLength }).map((_, index) => ({
+  //   id: index + 1,
+  //   email: faker.internet.email(),
+  //   password: faker.helpers.maybe(
+  //     () =>
+  //       hashSync(faker.internet.password({ length: 5, memorable: true }), 12),
+  //     { probability: 0.6 },
+  //   ),
+  // }));
+
+  // async hashing of password
+  // async-await doesn't work inside of Array.map() so use for-loop instead
+  const users: Object[] = [];
+  for (let i = 0; i < userArrLength; i++) {
+    const fakeUser = {
+      id: i + 1,
+      email: faker.internet.email(),
+      password: await faker.helpers.maybe(
+        async () =>
+          await hashPassword(
+            faker.internet.password({
+              length: 5,
+              memorable: true,
+            }),
+          ),
+        { probability: 0.6 },
+      ),
+      // alternative
+      //   password: faker.helpers.maybe(() => true, { probability: 0.6 })
+      //     ? await hashPassword(
+      //         faker.internet.password({
+      //           length: 5,
+      //           memorable: true,
+      //         }),
+      //       )
+      //     : undefined,
+    };
+    users.push(fakeUser);
+  }
+
+  //  longer version of above for-loop, but easier to read
+  // for (let i = 0; i < userArrLength; i++) {
+  //   let password = undefined;
+  //   const hasPassword = faker.helpers.maybe(() => true, { probability: 0.6 });
+  //   if (hasPassword) {
+  //     const randomPword = faker.internet.password({
+  //       length: 5,
+  //       memorable: true,
+  //     });
+  //     password = await hashPassword(randomPword);
+  //   }
+  //   const fakeUser = {
+  //     id: i + 1,
+  //     email: faker.internet.email(),
+  //     password: password,
+  //   };
+  //   users.push(fakeUser);
+  // }
 
   // convert this to create userProfiles based on a random set of users that may/may not have profiles then connect their user_id
   const userProfiles = Array.from({ length: userArrLength }).map((_, index) => {
@@ -375,4 +426,19 @@ function generateFakeModelDataArrays() {
   };
 }
 
-fs.writeFileSync(p, JSON.stringify(generateFakeModelDataArrays()));
+// sync hashing of password
+// fs.writeFileSync(p, JSON.stringify(generateFakeModelDataArrays()));
+
+// async hashing of password
+async function generateSeedData() {
+  const data = JSON.stringify(await generateFakeModelDataArrays());
+  fs.writeFile(p, data, (err) => {
+    if (err) {
+      console.error(err);
+    } else {
+      console.log('seed generated successfully!');
+    }
+  });
+}
+
+generateSeedData();
