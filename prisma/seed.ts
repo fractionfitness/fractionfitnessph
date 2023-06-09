@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import prisma from '@/lib/prisma';
+import prisma from '@/src/lib/prisma';
 
 const p = path.join(
   path.dirname(require.main.filename),
