@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 // import { hashSync } from 'bcrypt';
 
 import { generateRandomDateTimeString } from './seedUtils';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/src/lib/auth';
 
 const p = path.join(
   path.dirname(require.main.filename),
