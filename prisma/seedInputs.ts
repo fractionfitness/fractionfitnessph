@@ -201,19 +201,22 @@ async function generateFakeModelDataArrays() {
   // async-await doesn't work inside of Array.map() so use for-loop instead
   const users: Object[] = [];
   for (let i = 0; i < userArrLength; i++) {
+    const generatedPword = faker.helpers.maybe(
+      () =>
+        faker.internet.password({
+          length: 5,
+          memorable: true,
+        }),
+      {
+        probability: 0.6,
+      },
+    );
+
     const fakeUser = {
       id: i + 1,
       email: faker.internet.email(),
-      password: await faker.helpers.maybe(
-        async () =>
-          await hashPassword(
-            faker.internet.password({
-              length: 5,
-              memorable: true,
-            }),
-          ),
-        { probability: 0.6 },
-      ),
+      unhashedPassword: generatedPword,
+      password: generatedPword ? await hashPassword(generatedPword) : undefined,
       // alternative
       //   password: faker.helpers.maybe(() => true, { probability: 0.6 })
       //     ? await hashPassword(
