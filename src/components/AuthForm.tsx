@@ -50,12 +50,12 @@ export default function AuthForm({ mode }) {
         if (!newUser) {
           return;
         }
+        router.push('/api/auth/signin');
       }
       // else {
       //   await signin(existingUser);
+      //   router.replace('/'); // Back button won't work after signing in
       // }
-
-      router.push('/');
     } catch (e) {
       console.error(e);
     }
