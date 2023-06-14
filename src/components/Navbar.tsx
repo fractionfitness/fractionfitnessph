@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 import styles from './Navbar.module.css';
+import UserAvatar from './Shared/UserAvatar';
 
 export default function Navbar() {
   const currentUrl = usePathname();
@@ -14,8 +15,9 @@ export default function Navbar() {
   return (
     <nav className={styles.nav}>
       <Link href={'/'}>
-        <Image src="/ffph-logo.jpg" width={45} height={45} alt="FFPH Logo" />
-        Fraction Fitness PH
+        {/* <Image src="/ffph-logo.jpg" width={45} height={45} alt="FFPH Logo" /> */}
+        <UserAvatar src="/ffph-logo.jpg" alt="FFPH Logo" />
+        <span>Fraction Fitness PH</span>
       </Link>
       <ul className={styles.links}>
         {/* ----------------delete this after------------------- */}
@@ -36,9 +38,14 @@ export default function Navbar() {
           </>
         )}
         {session && (
-          <li>
-            <Link href={'/api/auth/signout?callbackUrl=/'}>Sign out</Link>
-          </li>
+          <>
+            <li>
+              <UserAvatar src="https://github.com/shadcn.png" alt="@shadcn" />
+            </li>
+            <li>
+              <Link href={'/api/auth/signout?callbackUrl=/'}>Sign out</Link>
+            </li>
+          </>
         )}
       </ul>
     </nav>
