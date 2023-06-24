@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import prisma from '@/src/lib/prisma';
+import prisma from '@/lib/prisma';
 
 // Get all Users
 export async function GET(req: Request) {
