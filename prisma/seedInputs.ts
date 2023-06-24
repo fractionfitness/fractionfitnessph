@@ -2,9 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { faker } from '@faker-js/faker';
 // import { hashSync } from 'bcrypt';
+import { hash } from 'bcrypt';
 
 import { generateRandomDateTimeString } from './seedUtils';
-import { hashPassword } from '@/src/lib/auth';
 
 const p = path.join(
   path.dirname(require.main.filename),
@@ -12,6 +12,12 @@ const p = path.join(
   'data',
   'seed.json',
 );
+
+// cannot import and use  the hashPassword from /lib/auth because it is a server-only module and ts-node thinks environment is client when executing this file
+// only way to import it is to make ts-node think that this file (seedInputs.ts) is a commonjs module using cjs import/exports (module.exports = {}) instead of es6 import/export
+async function hashPassword(password) {
+  return await hash(password, 12);
+}
 
 /* TODOS: ////////////////////////////////////////////////////////////////////
 
