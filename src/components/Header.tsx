@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import styles from './Header.module.css';
 import LogoAvatar from './LogoAvatar';
 import { Icons } from '@/components/Icons';
+import NavAccount from './NavAccount';
 
 export default function Header() {
   const currentUrl = usePathname();
@@ -49,16 +50,17 @@ export default function Header() {
           {session && (
             <>
               <li>
-                <LogoAvatar
+                {/* <LogoAvatar
                   src="https://github.com/shadcn.png"
                   alt="@shadcn"
                   className="h-10 w-10"
                   fallbackIcon={<Icons.user className="h-10 w-10" />}
-                />
+                /> */}
+                <NavAccount user={session.user} />
               </li>
-              <li>
+              {/* <li>
                 <Link href={'/api/auth/signout?callbackUrl=/'}>Sign out</Link>
-              </li>
+              </li> */}
             </>
           )}
         </ul>
