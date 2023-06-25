@@ -1,7 +1,7 @@
 import Image from 'next/image';
 
 import styles from './Footer.module.css';
-import UserAvatar from './UserAvatar';
+import LogoAvatar from './LogoAvatar';
 
 export default function Footer() {
   return (
@@ -14,7 +14,7 @@ export default function Footer() {
             height={45}
             alt="FFPH Logo"
           /> */}
-          <UserAvatar src="/octocat-avatar.png" alt="@elgato" />
+          <LogoAvatar src="/octocat-avatar.png" alt="@elgato" />
           <span>El Gato con Botas</span>
         </li>
       </ul>
