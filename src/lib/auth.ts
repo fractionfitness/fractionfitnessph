@@ -75,6 +75,9 @@ export const authOptions: NextAuthOptions = {
     //     // block signin if necessary
     //     return true;
     //   }
+    redirect() {
+      return '/';
+    },
   },
   providers: [
     CredentialsProvider({
