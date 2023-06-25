@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 
 import styles from './Header.module.css';
 import LogoAvatar from './LogoAvatar';
+import { Icons } from '@/components/Icons';
 
 export default function Header() {
   const currentUrl = usePathname();
@@ -17,7 +18,12 @@ export default function Header() {
       <nav className={styles.nav}>
         <Link href={'/'} className="items-center flex mx-4 space-x-2">
           {/* <Image src="/ffph-logo.jpg" width={45} height={45} alt="FFPH Logo" /> */}
-          <LogoAvatar src="/ffph-logo.jpg" alt="FFPH Logo" />
+          <LogoAvatar
+            src="/ffph-logo.jpg"
+            alt="FFPH Logo"
+            className="rounded-md"
+            fallbackIcon={<Icons.logoPlaceholder className="h-10 w-10" />}
+          />
           <span className="inline-block font-semibold text-lg">
             Fraction Fitness PH
           </span>
@@ -43,7 +49,12 @@ export default function Header() {
           {session && (
             <>
               <li>
-                <LogoAvatar src="https://github.com/shadcn.png" alt="@shadcn" />
+                <LogoAvatar
+                  src="https://github.com/shadcn.png"
+                  alt="@shadcn"
+                  className="h-10 w-10"
+                  fallbackIcon={<Icons.user className="h-10 w-10" />}
+                />
               </li>
               <li>
                 <Link href={'/api/auth/signout?callbackUrl=/'}>Sign out</Link>
