@@ -7,7 +7,7 @@ import { Icons } from './Icons';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-700 bg-gray-900 text-slate-500">
+    <footer className="border-t border-zinc-700  text-zinc-700">
       <ul className={styles.devs}>
         <li className="items-center space-x-2 flex">
           {/* <Image
@@ -20,7 +20,7 @@ export default function Footer() {
           <LogoAvatar
             src="/octocat-avatar.png"
             alt="@elgato"
-            className="w-7 h-7"
+            className="w-7 h-7 bg-zinc-700"
             fallbackIcon={<Icons.user className="w-7 h-7" />}
           />
           <span className="font-normal">El Gato con Botas</span>
