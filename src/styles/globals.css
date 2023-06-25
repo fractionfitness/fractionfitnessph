@@ -5,13 +5,13 @@
 @layer base {
   body {
     font-feature-settings: 'rlig' 1, 'calt' 1;
-    display: flex;
+    /* display: flex;
     height: 100vh;
     flex-direction: column;
-    min-width: fit-content;
+    min-width: fit-content; */
   }
-  main {
+  /* main {
     flex-grow: 1;
     text-align: center;
-  }
+  } */
 }

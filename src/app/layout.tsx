@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google';
 
 import '@/styles/globals.css';
+import { cn } from '@/lib/utils';
 import Providers from '@/components/Providers';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -19,10 +20,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body
+        className={cn(
+          'flex min-h-screen flex-col min-w-fit bg-gray-900',
+          inter.className,
+        )}
+      >
         <Providers>
           <Navbar />
-          <main>{children}</main>
+          <main className="flex-grow text-center container max-w-7xl mx-auto">
+            {children}
+          </main>
           <Footer />
         </Providers>
       </body>
