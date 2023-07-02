@@ -36,3 +36,12 @@ export const register = (formData) => {
     });
   }
 };
+
+// sample fetch request for client components (use client)
+// export const getUserGroups = (userId) => {
+//   return fetcher({
+//     url: `/api/users/${userId}/groups`,
+//     method: 'get',
+//     body: null,
+//   });
+// };

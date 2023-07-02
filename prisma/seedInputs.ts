@@ -19,6 +19,12 @@ async function hashPassword(password) {
   return await hash(password, 12);
 }
 
+// generate hashed password given input
+// async function exec() {
+//   console.log(await hashPassword('pwordly'));
+// }
+// exec();
+
 /* TODOS: ////////////////////////////////////////////////////////////////////
 
 - fix user, employee, and member roles since right now it is only assuming the default
