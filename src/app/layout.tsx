@@ -29,7 +29,9 @@ export default function RootLayout({
         <Providers>
           <Header />
           <main
-            className={cn('flex-grow text-center container max-w-7xl mx-auto')}
+            className={cn(
+              'flex-grow text-center container max-w-7xl mx-auto text-zinc-100',
+            )}
           >
             {children}
           </main>
