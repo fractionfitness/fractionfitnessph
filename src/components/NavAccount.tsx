@@ -64,7 +64,7 @@ const NavAccount: FC = ({ user }) => {
           onSelect={(e) => {
             e.preventDefault();
             signOut({
-              callbackUrl: `${window.location.origin}/api/auth/signin`,
+              callbackUrl: `${window.location.origin}/api/auth/signin?callbackUrl=/dashboard/user`,
             });
           }}
         >
