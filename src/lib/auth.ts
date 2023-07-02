@@ -75,8 +75,22 @@ export const authOptions: NextAuthOptions = {
     //     // block signin if necessary
     //     return true;
     //   }
-    redirect() {
-      return '/';
+    // callbackUrl won't work and will be overridden after signin
+    //  find a way to get the from or callbackUrl query param and redirect to that
+
+    // only executes when user is redirected to a callbackUrl (like after signin)
+    // return value is where user is ultimately redirected
+    // url is the callbackUrl value | baseUrl contains the origin
+    redirect({ baseUrl, url }) {
+      // console.log('baseUrl===>', baseUrl);
+      // console.log('url===>', url);
+
+      // Allow relative callback URLs
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // Allow callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+
+      return baseUrl;
     },
   },
   providers: [
@@ -126,6 +140,14 @@ export const authOptions: NextAuthOptions = {
 
         // extract required User's fields (excluding password)
         const { id, email, role, profile: userProfile } = existingUser;
+
+        if (!userProfile) {
+          return {
+            id,
+            email,
+            role,
+          };
+        }
 
         // only include UserProfile's name fields
         const { first_name, middle_name, last_name, suffix_name, full_name } =

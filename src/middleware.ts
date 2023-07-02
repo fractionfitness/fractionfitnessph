@@ -19,6 +19,7 @@ export default withAuth(
     const isAuthRoute = req.nextUrl.pathname.startsWith('/api/auth/signin');
     // || req.nextUrl.pathname.startsWith('/register');
 
+    // currently not working
     if (isAuthRoute) {
       if (isAuth) {
         return NextResponse.redirect(new URL('/dashboard/user', req.url));
@@ -36,10 +37,18 @@ export default withAuth(
         from += req.nextUrl.search;
       }
 
+      // return NextResponse.redirect(
+      //   new URL(`/api/auth/signin?from=${encodeURIComponent(from)}`, req.url),
+      // );
+      // what is "?from=" used for? "?from=" can be used in the next-auth signin function since it is passed as a query param
+
+      // better to use "?callbackUrl="  since redirect callback of next-auth will automatically execute when a callbackUrl is used
       return NextResponse.redirect(
-        new URL(`/api/auth/signin?from=${encodeURIComponent(from)}`, req.url),
+        new URL(
+          `/api/auth/signin?callbackUrl=${encodeURIComponent(from)}`,
+          req.url,
+        ),
       );
-      // better to use callbackUrl= instead of from= | what is from= used for
     }
   },
   {
@@ -58,7 +67,8 @@ export default withAuth(
         // execute middleware only if there is a valid token
         // return !!token;
 
-        // always execute middleware
+        // always execute custom middleware if true
+        // if false, withAuth middleware will be executed but not the custom middleware
         return true;
       },
     },
