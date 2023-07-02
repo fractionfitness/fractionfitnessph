@@ -28,7 +28,7 @@ export default function RootLayout({
       >
         <Providers>
           <Header />
-          <main className="flex-grow text-center container max-w-7xl mx-auto">
+          <main className="flex-grow text-center container max-w-7xl mx-auto text-zinc-100">
             {children}
           </main>
           <Footer />
