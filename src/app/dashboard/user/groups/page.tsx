@@ -88,11 +88,10 @@ export default async function UserGroups({}) {
     const userGroupRecords = [...employmentGroups, ...membershipGroups];
 
     // collate all of user's roles for each group | make sure no repetition in group[] and group element's roles[]
-    let userGroupsCollated = [];
-
-    userGroupRecords.map((group) => {
+    let userGroupsCollated = userGroupRecords.reduce((acc, group) => {
+      // check if group already exists in accumulator
       let groupMatch;
-      userGroupsCollated.forEach((g, i) => {
+      acc.forEach((g, i) => {
         let skipCheck = false;
         if (skipCheck) return; // will not break out of loop but will skip the following "if" block
         if (g.id === group.id) {
@@ -101,22 +100,26 @@ export default async function UserGroups({}) {
           return;
         }
       });
+
+      // no group matches in acc
       if (!groupMatch) {
+        // add group record to acc, modifying group's role into an array
         const { role, ...groupProperties } = group;
-        userGroupsCollated.push({ ...groupProperties, roles: [role] });
+        acc.push({ ...groupProperties, roles: [role] });
+        return acc;
       } else {
+        // add user's role to matched group in acc
         groupMatch.data.roles.push(group.role);
-        userGroupsCollated.splice(groupMatch.index, 1, groupMatch.data);
+        acc.splice(groupMatch.index, 1, groupMatch.data);
+        return acc;
       }
-    });
+    }, []);
 
     // console.log('userGroupRecords', userGroupRecords);
     // console.log('userGroupsCollated', userGroupsCollated);
 
     return (
       <div className="space-y-2">
-        <p>/dashboard/user/groups</p>
-
         <hr />
         <p>User&apos;s Groups</p>
         <div className="flex flex-row justify-center">
