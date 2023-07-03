@@ -18,7 +18,12 @@
       "unhashedPassword": "yiloy",
       "password": "$2b$12$6sNt9xwv2Xjy.bIhUUCJkuSsymWJymALTA0ieeKb9RJu1Xrk.dBCK"
     },
-    { "id": 4, "email": "Gladys_Emmerich@yahoo.com", "unhashedPassword": "pwordly", "password": "$2b$12$RDgHMd.6wlr9bRJHl7VwpeAZ7d.yCU/6LnyAJhVmr.SS1WfE3VCUi" },
+    {
+      "id": 4,
+      "email": "Gladys_Emmerich@yahoo.com",
+      "unhashedPassword": "pwordly",
+      "password": "$2b$12$RDgHMd.6wlr9bRJHl7VwpeAZ7d.yCU/6LnyAJhVmr.SS1WfE3VCUi"
+    },
     {
       "id": 5,
       "email": "Leon.Leuschke20@gmail.com",
@@ -282,152 +287,152 @@
       "group_id": 2,
       "name": "Adults Morning",
       "day": "MONDAY",
-      "start_at": "1970-01-01T09:30:00.000Z",
-      "end_at": "1970-01-01T11:00:00.000Z"
+      "start_at": "1970-01-01T09:30:00+08:00",
+      "end_at": "1970-01-01T11:00:00+08:00"
     },
     {
       "id": 3,
       "group_id": 2,
       "name": "Adults Morning",
       "day": "TUESDAY",
-      "start_at": "1970-01-01T09:30:00.000Z",
-      "end_at": "1970-01-01T11:00:00.000Z"
+      "start_at": "1970-01-01T09:30:00+08:00",
+      "end_at": "1970-01-01T11:00:00+08:00"
     },
     {
       "id": 4,
       "group_id": 2,
       "name": "Adults Morning",
       "day": "THURSDAY",
-      "start_at": "1970-01-01T09:30:00.000Z",
-      "end_at": "1970-01-01T11:00:00.000Z"
+      "start_at": "1970-01-01T09:30:00+08:00",
+      "end_at": "1970-01-01T11:00:00+08:00"
     },
     {
       "id": 5,
       "group_id": 2,
       "name": "Adults & Minors Lvl 3 Weekday Afternoon",
       "day": "MONDAY",
-      "start_at": "1970-01-01T17:30:00.000Z",
-      "end_at": "1970-01-01T18:30:00.000Z"
+      "start_at": "1970-01-01T17:30:00+08:00",
+      "end_at": "1970-01-01T18:30:00+08:00"
     },
     {
       "id": 6,
       "group_id": 2,
       "name": "Adults & Minors Lvl 3 Weekday Afternoon",
       "day": "WEDNESDAY",
-      "start_at": "1970-01-01T17:30:00.000Z",
-      "end_at": "1970-01-01T18:30:00.000Z"
+      "start_at": "1970-01-01T17:30:00+08:00",
+      "end_at": "1970-01-01T18:30:00+08:00"
     },
     {
       "id": 7,
       "group_id": 2,
       "name": "Adults & Minors Lvl 3 Weekday Afternoon - No Gi",
       "day": "FRIDAY",
-      "start_at": "1970-01-01T17:30:00.000Z",
-      "end_at": "1970-01-01T18:30:00.000Z"
+      "start_at": "1970-01-01T17:30:00+08:00",
+      "end_at": "1970-01-01T18:30:00+08:00"
     },
     {
       "id": 8,
       "group_id": 2,
       "name": "Adults Evening",
       "day": "MONDAY",
-      "start_at": "1970-01-01T19:30:00.000Z",
-      "end_at": "1970-01-01T21:30:00.000Z"
+      "start_at": "1970-01-01T19:30:00+08:00",
+      "end_at": "1970-01-01T21:30:00+08:00"
     },
     {
       "id": 9,
       "group_id": 2,
       "name": "Adults Evening",
       "day": "TUESDAY",
-      "start_at": "1970-01-01T19:30:00.000Z",
-      "end_at": "1970-01-01T21:30:00.000Z"
+      "start_at": "1970-01-01T19:30:00+08:00",
+      "end_at": "1970-01-01T21:30:00+08:00"
     },
     {
       "id": 10,
       "group_id": 2,
       "name": "Adults Evening",
       "day": "WEDNESDAY",
-      "start_at": "1970-01-01T19:30:00.000Z",
-      "end_at": "1970-01-01T21:30:00.000Z"
+      "start_at": "1970-01-01T19:30:00+08:00",
+      "end_at": "1970-01-01T21:30:00+08:00"
     },
     {
       "id": 11,
       "group_id": 2,
       "name": "Adults Evening - No Gi",
       "day": "THURSDAY",
-      "start_at": "1970-01-01T19:30:00.000Z",
-      "end_at": "1970-01-01T21:30:00.000Z"
+      "start_at": "1970-01-01T19:30:00+08:00",
+      "end_at": "1970-01-01T21:30:00+08:00"
     },
     {
       "id": 12,
       "group_id": 2,
       "name": "Adults & Minors Lvl 3 Evening",
       "day": "FRIDAY",
-      "start_at": "1970-01-01T19:30:00.000Z",
-      "end_at": "1970-01-01T21:30:00.000Z"
+      "start_at": "1970-01-01T19:30:00+08:00",
+      "end_at": "1970-01-01T21:30:00+08:00"
     },
     {
       "id": 13,
       "group_id": 2,
       "name": "Adults Sat",
       "day": "SATURDAY",
-      "start_at": "1970-01-01T14:30:00.000Z",
-      "end_at": "1970-01-01T16:30:00.000Z"
+      "start_at": "1970-01-01T14:30:00+08:00",
+      "end_at": "1970-01-01T16:30:00+08:00"
     },
     {
       "id": 14,
       "group_id": 2,
       "name": "Adults & Minors Level 1 & 2 Sun",
       "day": "SUNDAY",
-      "start_at": "1970-01-01T16:30:00.000Z",
-      "end_at": "1970-01-01T18:00:00.000Z"
+      "start_at": "1970-01-01T16:30:00+08:00",
+      "end_at": "1970-01-01T18:00:00+08:00"
     },
     {
       "id": 15,
       "group_id": 2,
       "name": "Minors Lvl 1 Fri",
       "day": "FRIDAY",
-      "start_at": "1970-01-01T16:30:00.000Z",
-      "end_at": "1970-01-01T17:30:00.000Z"
+      "start_at": "1970-01-01T16:30:00+08:00",
+      "end_at": "1970-01-01T17:30:00+08:00"
     },
     {
       "id": 16,
       "group_id": 2,
       "name": "Minors Lvl 1 Sat",
       "day": "SATURDAY",
-      "start_at": "1970-01-01T13:00:00.000Z",
-      "end_at": "1970-01-01T14:30:00.000Z"
+      "start_at": "1970-01-01T13:00:00+08:00",
+      "end_at": "1970-01-01T14:30:00+08:00"
     },
     {
       "id": 17,
       "group_id": 2,
       "name": "Minors Lvl 3 Weekday",
       "day": "MONDAY",
-      "start_at": "1970-01-01T17:30:00.000Z",
-      "end_at": "1970-01-01T18:30:00.000Z"
+      "start_at": "1970-01-01T17:30:00+08:00",
+      "end_at": "1970-01-01T18:30:00+08:00"
     },
     {
       "id": 18,
       "group_id": 2,
       "name": "Minors Lvl 3 Weekday",
       "day": "WEDNESDAY",
-      "start_at": "1970-01-01T17:30:00.000Z",
-      "end_at": "1970-01-01T18:30:00.000Z"
+      "start_at": "1970-01-01T17:30:00+08:00",
+      "end_at": "1970-01-01T18:30:00+08:00"
     },
     {
       "id": 19,
       "group_id": 2,
       "name": "Minors Lvl 2 & 3 Weekday - No Gi",
       "day": "FRIDAY",
-      "start_at": "1970-01-01T17:30:00.000Z",
-      "end_at": "1970-01-01T18:30:00.000Z"
+      "start_at": "1970-01-01T17:30:00+08:00",
+      "end_at": "1970-01-01T18:30:00+08:00"
     },
     {
       "id": 20,
       "group_id": 2,
       "name": "Minors Lvl 2 & 3 Sat",
       "day": "SATURDAY",
-      "start_at": "1970-01-01T14:30:00.000Z",
-      "end_at": "1970-01-01T16:30:00.000Z"
+      "start_at": "1970-01-01T14:30:00+08:00",
+      "end_at": "1970-01-01T16:30:00+08:00"
     }
   ],
   "groupRelations": [
