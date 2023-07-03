@@ -14,7 +14,13 @@ function GroupLink({ group }) {
         <p>{group.name}</p>
       </Link>
       {/* make this a pillbox */}
-      <p className="lowercase">{group.role}</p>
+      <ul className="flex space-x-2 justify-center">
+        {group.roles.map((role) => (
+          <li key={role} className="lowercase">
+            {role}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -63,10 +69,11 @@ export default async function UserGroups({}) {
     //   ),
     // ]);
 
-    const ownedGroups = user.groups.map((group) => ({
-      ...group,
-      role: 'OWNER',
-    }));
+    // not needed since references to user's owned groups is already included in employmentGroups
+    // const ownedGroups = user.groups.map((group) => ({
+    //   ...group,
+    //   role: 'OWNER',
+    // }));
 
     const employmentGroups = user?.employments.map((employment) => ({
       ...employment.group,
@@ -77,33 +84,44 @@ export default async function UserGroups({}) {
       role: membership.role,
     }));
 
+    // user's group records
+    const userGroupRecords = [...employmentGroups, ...membershipGroups];
+
+    // collate all of user's roles for each group | make sure no repetition in group[] and group element's roles[]
+    let userGroupsCollated = [];
+
+    userGroupRecords.map((group) => {
+      let groupMatch;
+      userGroupsCollated.forEach((g, i) => {
+        let skipCheck = false;
+        if (skipCheck) return; // will not break out of loop but will skip the following "if" block
+        if (g.id === group.id) {
+          groupMatch = { index: i, data: g };
+          skipCheck = true;
+          return;
+        }
+      });
+      if (!groupMatch) {
+        const { role, ...groupProperties } = group;
+        userGroupsCollated.push({ ...groupProperties, roles: [role] });
+      } else {
+        groupMatch.data.roles.push(group.role);
+        userGroupsCollated.splice(groupMatch.index, 1, groupMatch.data);
+      }
+    });
+
+    // console.log('userGroupRecords', userGroupRecords);
+    // console.log('userGroupsCollated', userGroupsCollated);
+
     return (
       <div className="space-y-2">
         <p>/dashboard/user/groups</p>
 
         <hr />
-        <p>Owned Groups</p>
+        <p>User&apos;s Groups</p>
         <div className="flex flex-row justify-center">
-          {ownedGroups.length > 0 &&
-            ownedGroups.map((group) => (
-              <GroupLink key={group.id} group={group} />
-            ))}
-        </div>
-
-        <hr />
-        <p>Employers</p>
-        <div className="flex flex-row justify-center">
-          {employmentGroups.length > 0 &&
-            employmentGroups.map((group) => (
-              <GroupLink key={group.id} group={group} />
-            ))}
-        </div>
-
-        <hr />
-        <p>Memberships</p>
-        <div className="flex flex-row justify-center">
-          {membershipGroups.length > 0 &&
-            membershipGroups.map((group) => (
+          {userGroupsCollated.length > 0 &&
+            userGroupsCollated.map((group) => (
               <GroupLink key={group.id} group={group} />
             ))}
         </div>
