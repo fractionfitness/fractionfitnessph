@@ -4,6 +4,21 @@ import { getAuthSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { buttonVariants } from '@/components/ui-shadcn/Button';
 
+function GroupLink({ group }) {
+  return (
+    <div className="w-fit border border-white">
+      <Link
+        href={`/dashboard/group/${group.id}`}
+        className={buttonVariants({ variant: 'default' })}
+      >
+        <p>{group.name}</p>
+      </Link>
+      {/* make this a pillbox */}
+      <p className="lowercase">{group.role}</p>
+    </div>
+  );
+}
+
 export default async function UserGroups({}) {
   try {
     const session = await getAuthSession();
@@ -48,57 +63,50 @@ export default async function UserGroups({}) {
     //   ),
     // ]);
 
-    const ownedGroups = user.groups;
+    const ownedGroups = user.groups.map((group) => ({
+      ...group,
+      role: 'OWNER',
+    }));
 
-    const employmentGroups = user?.employments.map(
-      (employment) => employment.group,
-    );
-    const membershipGroups = user?.memberships.map(
-      (membership) => membership.group,
-    );
-
-    // console.log('employmentGroups', employmentGroups);
-    // console.log('membershipGroups', membershipGroups);
+    const employmentGroups = user?.employments.map((employment) => ({
+      ...employment.group,
+      role: employment.role,
+    }));
+    const membershipGroups = user?.memberships.map((membership) => ({
+      ...membership.group,
+      role: membership.role,
+    }));
 
     return (
-      <div>
+      <div className="space-y-2">
         <p>/dashboard/user/groups</p>
 
+        <hr />
         <p>Owned Groups</p>
-        {ownedGroups.length > 0 &&
-          ownedGroups.map((group) => (
-            <Link
-              href={`/dashboard/group/${group.id}`}
-              key={group.id}
-              className={buttonVariants({ variant: 'default' })}
-            >
-              {group.name}
-            </Link>
-          ))}
+        <div className="flex flex-row justify-center">
+          {ownedGroups.length > 0 &&
+            ownedGroups.map((group) => (
+              <GroupLink key={group.id} group={group} />
+            ))}
+        </div>
 
+        <hr />
         <p>Employers</p>
-        {employmentGroups.length > 0 &&
-          employmentGroups.map((group) => (
-            <Link
-              href={`/dashboard/group/${group.id}`}
-              key={group.id}
-              className={buttonVariants({ variant: 'default' })}
-            >
-              {group.name}
-            </Link>
-          ))}
+        <div className="flex flex-row justify-center">
+          {employmentGroups.length > 0 &&
+            employmentGroups.map((group) => (
+              <GroupLink key={group.id} group={group} />
+            ))}
+        </div>
 
+        <hr />
         <p>Memberships</p>
-        {membershipGroups.length > 0 &&
-          membershipGroups.map((group) => (
-            <Link
-              href={`/dashboard/group/${group.id}`}
-              key={group.id}
-              className={buttonVariants({ variant: 'default' })}
-            >
-              {group.name}
-            </Link>
-          ))}
+        <div className="flex flex-row justify-center">
+          {membershipGroups.length > 0 &&
+            membershipGroups.map((group) => (
+              <GroupLink key={group.id} group={group} />
+            ))}
+        </div>
       </div>
     );
   } catch (err) {
