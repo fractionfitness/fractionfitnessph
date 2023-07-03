@@ -24,7 +24,10 @@ function GroupSessions({ group }) {
           // console.log('timezone offset', sessionEnd.getTimezoneOffset());
 
           return (
-            <li className="w-40 border border-white" key={session.id}>
+            <li
+              className="w-40 mobile:w-80 border border-white"
+              key={session.id}
+            >
               <p>{session.name}</p>
               <p>
                 <span>{session.day}</span> <span>{formattedSessionStart}</span>{' '}
