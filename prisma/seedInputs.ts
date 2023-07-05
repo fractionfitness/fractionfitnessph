@@ -4,7 +4,10 @@ import { faker } from '@faker-js/faker';
 // import { hashSync } from 'bcrypt';
 import { hash } from 'bcrypt';
 
-import { generateRandomDateTimeString } from './seedUtils';
+import {
+  generateRandomDateTimeObj,
+  convertToMysqlDatetimeString,
+} from './seedUtils';
 
 const p = path.join(
   path.dirname(require.main.filename),
@@ -414,8 +417,7 @@ async function generateFakeModelDataArrays() {
           session_id: selectedSession.id,
           member_id: member.id,
           // datetimestamp should be a random Date that must be the same day as the session, and checkin time is in between the session's start_at and end_at values
-          datetimestamp: new Date(generateRandomDateTimeString()),
-          date: new Date(generateRandomDateTimeString().slice(0, 10)),
+          datetime: generateRandomDateTimeObj(),
         };
 
         memberCheckins.push(memberCheckinRecord);
