@@ -32,7 +32,7 @@ const {
   groupRelations,
   employees,
   members,
-  checkins,
+  memberCheckins,
 } = seed;
 
 async function main() {
@@ -44,10 +44,10 @@ async function main() {
   const deleteGroupRelations = prisma.groupRelation.deleteMany();
   const deleteEmployees = prisma.employee.deleteMany();
   const deleteMembers = prisma.member.deleteMany();
-  const deleteCheckins = prisma.checkin.deleteMany();
+  const deleteMemberCheckins = prisma.memberCheckin.deleteMany();
 
   await prisma.$transaction([
-    deleteCheckins,
+    deleteMemberCheckins,
     deleteEmployees,
     deleteMembers,
     deleteGroupRelations,
@@ -140,8 +140,8 @@ async function main() {
     skipDuplicates: true,
   });
 
-  const createCheckins = prisma.checkin.createMany({
-    data: checkins,
+  const createMemberCheckins = prisma.memberCheckin.createMany({
+    data: memberCheckins,
     skipDuplicates: true,
   });
 
@@ -152,7 +152,7 @@ async function main() {
     createGroupRelations,
     createEmployees,
     createMembers,
-    createCheckins,
+    createMemberCheckins,
   ]);
 }
 

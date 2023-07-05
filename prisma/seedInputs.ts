@@ -391,7 +391,7 @@ async function generateFakeModelDataArrays() {
   });
   idCount = 1;
 
-  let checkins = [];
+  let memberCheckins = [];
   members.map((member) => {
     // get all of the current member's group sessions
     const availableSessionsForMember = sessions.filter(
@@ -404,12 +404,12 @@ async function generateFakeModelDataArrays() {
       const numberOfCheckins = faker.helpers.rangeToNumber({ min: 0, max: 10 });
 
       for (let i = 0; i < numberOfCheckins; i++) {
-        // won't matter if selectedSessionId repeats since: (1) prisma will ensure duplicate records are not written to the db , and (2) datetimestamp should always be different every loop since a checkin could be the same session but different datetimestamp
+        // won't matter if selectedSessionId repeats since: (1) prisma will ensure duplicate records are not written to the db , and (2) datetimestamp should always be different every loop since a memberCheckin could be the same session but different datetimestamp
         const selectedSession = faker.helpers.arrayElement(
           availableSessionsForMember,
         );
 
-        const checkinRecord = {
+        const memberCheckinRecord = {
           id: idCount++,
           session_id: selectedSession.id,
           member_id: member.id,
@@ -418,7 +418,7 @@ async function generateFakeModelDataArrays() {
           date: new Date(generateRandomDateTimeString().slice(0, 10)),
         };
 
-        checkins.push(checkinRecord);
+        memberCheckins.push(memberCheckinRecord);
       }
     }
   });
@@ -431,7 +431,7 @@ async function generateFakeModelDataArrays() {
     groupRelations,
     employees,
     members,
-    checkins,
+    memberCheckins,
   };
 }
 
