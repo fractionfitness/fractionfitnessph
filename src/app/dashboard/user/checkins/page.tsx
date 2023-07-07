@@ -1,10 +1,11 @@
 import { getAuthSession } from '@/lib/auth';
-import prisma from '@/lib/prisma';
 import { convertToMysqlDatetimeString } from '@/prisma/seedUtils';
 import { DAY_NAMES } from '@/config';
+import getUserCheckins from '@/lib/prismaQueries/getUserCheckins';
 
 function Checkin({ checkinRecord: { group, checkin, role } }) {
   const { session } = checkin;
+
   const sessionStart = convertToMysqlDatetimeString(session.start_at).slice(
     11,
     16,
@@ -38,35 +39,10 @@ function Checkin({ checkinRecord: { group, checkin, role } }) {
   );
 }
 
-export default async function UserCheckins({}) {
+export default async function Page({}) {
   try {
     const session = await getAuthSession();
-
-    const user = await prisma.user.findFirst({
-      where: {
-        id: session?.user?.id,
-      },
-      include: {
-        memberships: {
-          include: {
-            group: true,
-            checkins: {
-              include: {
-                session: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    let membershipCheckins = user?.memberships.reduce((acc, membership) => {
-      const { group, role, checkins } = membership;
-      checkins.map((checkin) => {
-        acc.push({ group, role, checkin });
-      });
-      return acc;
-    }, []);
+    const membershipCheckins = await getUserCheckins(session?.user);
 
     return (
       <div>
