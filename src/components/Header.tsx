@@ -31,10 +31,29 @@ export default function Header() {
           </span>
         </Link>
         <ul className={cn(styles.links, 'text-muted-foreground')}>
+          {/* client components cannot import server components */}
+          {/* {currentUrl.startsWith('/dashboard') && (
+            <li>
+              <p>Dashboard: </p>&nbsp;
+            </li>
+          )}
+          {currentUrl.startsWith('/dashboard/group') && (
+            <li>
+              <SelectUserGroup groups={groups} />
+            </li>
+          )} */}
           {/* ----------------delete this after------------------- */}
-          <li className={cn(styles.links, 'hover:text-foreground')}>
-            <Link href={'/dashboard/user'}>UserDashboard</Link>
-          </li>
+
+          {session && currentUrl === '/' && (
+            <li className={cn(styles.links, 'hover:text-foreground')}>
+              <Link href={'/dashboard/user'}>UserDash</Link>
+            </li>
+          )}
+          {session && currentUrl === '/' && (
+            <li className={cn(styles.links, 'hover:text-foreground')}>
+              <Link href={'/dashboard/group'}>GroupDash</Link>
+            </li>
+          )}
           {/* ----------------delete this after------------------- */}
           {!session && (
             <>
