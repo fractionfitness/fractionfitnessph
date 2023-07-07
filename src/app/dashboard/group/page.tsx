@@ -1,3 +1,7 @@
-export default function GroupDashboard() {
-  return <>GroupDashboard</>;
+export default function Page() {
+  return (
+    <div>
+      <p>All Groups Page</p>
+    </div>
+  );
 }
