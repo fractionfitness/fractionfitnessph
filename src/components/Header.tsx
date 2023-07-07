@@ -16,7 +16,7 @@ export default function Header() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-700 bg-stone-900">
+    <header className="sticky top-0 z-40 border-b border-slate-700 bg-gray-900">
       <nav className={styles.nav}>
         <Link href={'/'} className="items-center flex mx-4 space-x-2">
           {/* <Image src="/ffph-logo.jpg" width={45} height={45} alt="FFPH Logo" /> */}
@@ -26,15 +26,34 @@ export default function Header() {
             className="rounded-md"
             fallbackIcon={<Icons.logoPlaceholder className="h-10 w-10" />}
           />
-          <span className="inline-block font-semibold text-lg text-stone-100">
+          <span className="inline-block font-semibold text-lg text-gray-100">
             Fraction Fitness PH
           </span>
         </Link>
-        <ul className={cn(styles.links, 'text-stone-400')}>
+        <ul className={cn(styles.links, 'text-gray-400')}>
+          {/* client components cannot import server components */}
+          {/* {currentUrl.startsWith('/dashboard') && (
+            <li>
+              <p>Dashboard: </p>&nbsp;
+            </li>
+          )}
+          {currentUrl.startsWith('/dashboard/group') && (
+            <li>
+              <SelectUserGroup groups={groups} />
+            </li>
+          )} */}
           {/* ----------------delete this after------------------- */}
-          <li>
-            <Link href={'/dashboard/user'}>UserDashboard</Link>
-          </li>
+
+          {session && currentUrl === '/' && (
+            <li>
+              <Link href={'/dashboard/user'}>UserDash</Link>
+            </li>
+          )}
+          {session && currentUrl === '/' && (
+            <li>
+              <Link href={'/dashboard/group'}>GroupDash</Link>
+            </li>
+          )}
           {/* ----------------delete this after------------------- */}
           {!session && (
             <>
