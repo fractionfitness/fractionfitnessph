@@ -1,6 +1,6 @@
 import { getAuthSession } from '@/lib/auth';
-import prisma from '@/lib/prisma';
 import { convertToMysqlDatetimeString } from '@/prisma/seedUtils';
+import getUserGroupsSessions from '@/lib/prismaQueries/getUserGroupsSessions';
 
 function GroupSession({ groupSession: { group, session } }) {
   const sessionStart = convertToMysqlDatetimeString(session.start_at).slice(
@@ -22,45 +22,11 @@ function GroupSession({ groupSession: { group, session } }) {
   );
 }
 
-export default async function UserGroups({}) {
+export default async function Page({}) {
   try {
     const session = await getAuthSession();
 
-    const user = await prisma.user.findFirst({
-      where: {
-        id: session?.user?.id,
-      },
-      include: {
-        groups: {
-          include: {
-            sessions: true,
-          },
-        },
-        memberships: {
-          include: {
-            group: {
-              include: {
-                sessions: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const membershipGroups = user?.memberships.map((membership) => ({
-      ...membership.group,
-    }));
-
-    const groupSessions = membershipGroups?.reduce((acc, group) => {
-      acc.push(
-        ...group.sessions.map((session) => ({
-          group,
-          session,
-        })),
-      );
-      return acc;
-    }, []);
+    const groupSessions = await getUserGroupsSessions(session?.user);
 
     return (
       <div>
