@@ -5,6 +5,7 @@ const nextConfig = {
     // appDir: true,
     // add deps here that server components use
     serverComponentsExternalPackages: ['bcrypt', '@prisma/client'],
+    serverActions: true,
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
