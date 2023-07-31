@@ -4,6 +4,7 @@ const nextConfig = {
     appDir: true,
     // add deps herer that server components use
     serverComponentsExternalPackages: ['bcrypt', '@prisma/client'],
+    serverActions: true,
   },
 };
 
