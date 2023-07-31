@@ -8,3 +8,11 @@ export const DAY_NAMES = [
   'friday',
   'saturday',
 ];
+export const memberContent = {
+  userType: 'Member',
+  groupType: 'Membership',
+};
+export const employeeContent = {
+  userType: 'Employee',
+  groupType: 'Employment',
+};

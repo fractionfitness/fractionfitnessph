@@ -1,29 +1,30 @@
 import { getAuthSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import AddUserCommand from '@/components/AddUserCommand';
 
-function Member({ member }) {
+function Member({ groupUser }) {
   return (
     <div className="w-fit flex flex-row space-x-2 space-y-2">
       <p></p>
-      <p className="border border-foreground rounded-lg p-1">
-        {member.userProfile.full_name}
+      <p className="border border-foreground rounded-lg pt-2 p-1 px-2">
+        {groupUser.userProfile.full_name}
       </p>
-      <p className="border border-foreground rounded-lg p-1">
-        {member.group.name}
+      <p className="border border-foreground rounded-lg pt-2 p-1 px-2">
+        {groupUser.group.name}
       </p>
-      <p className="border border-foreground rounded-lg p-1">{member.role}</p>
-      {/* add this column */}
-      {/* <p>member_status</p> */}
-      {/* should be another column computed by a cronJob */}
-      {/* <p>checkins/mo</p> */}
-      {/* Add call-to-action to edit, delete, and add member depending on employee's group role */}
+      <p className="border border-foreground rounded-lg pt-2 p-1 px-2">
+        {groupUser.role.charAt(0)}
+      </p>
+      {/* add <p>member_status to Model</p> */}
+      {/* add member_activity 3-mo moving average of session checkins | should be another column computed by a cronJob */}
+      {/* Permissions to edit, delete, and add member should depend on employee's group role */}
     </div>
   );
 }
 
 export default async function UserGroups({ params: { groupId } }) {
   try {
-    console.log('params check===>', groupId);
+    // console.log('params check===>', groupId);
     const session = await getAuthSession();
 
     // currently only querying one group at a time
@@ -54,12 +55,17 @@ export default async function UserGroups({ params: { groupId } }) {
       <div className="space-y-2">
         <hr />
         <p>Group Members</p>
-        <div className="flex flex-col justify-center">
-          {groupMembers.length > 0 &&
-            groupMembers.map((member) => (
-              <Member key={member.id} member={member} />
+
+        <AddUserCommand mode="member" />
+        {/* <AddUserCommand mode="employment" /> */}
+
+        {groupMembers.length > 0 && (
+          <div className="flex flex-col justify-center">
+            {groupMembers.map((member) => (
+              <Member key={member.id} groupUser={member} />
             ))}
-        </div>
+          </div>
+        )}
       </div>
     );
   } catch (err) {
