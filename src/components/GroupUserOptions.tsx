@@ -12,6 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui-shadcn/Select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui-shadcn/AlertDialog';
 import { Label } from './ui-shadcn/Label';
 import { Button } from './ui-shadcn/Button';
 import { Icons } from '@/components/Icons';
@@ -48,6 +59,36 @@ function SelectOptions({
   );
 }
 
+function RemoveAlertDialog({ handleRemoveUser }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="hover:bg-red-700 hover:text-gray-50 p-1 border-2 border-red-600 text-red-700"
+        >
+          REMOVE
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete your
+            account and remove your data from our servers.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel variant="default">Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={handleRemoveUser}>
+            REMOVE
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 // make a button component that can be used in the client, so that it can be separated from GroupUserOptions and GroupUserOptions can just be a server component
 // no need for a separate SelectOptions comp???
 
@@ -80,8 +121,6 @@ export default function GroupUserOptions({
 
   const { userType, groupType } =
     mode === 'member' ? memberContent : employeeContent;
-
-  const testRef = useRef(null);
 
   // initialize PopoverTrigger to be active
   useEffect(() => {
@@ -195,17 +234,12 @@ export default function GroupUserOptions({
               EDIT
             </Button>
           </div>
+
           <hr />
           <p className="text-sm text-muted-foreground text-center">
             {`Remove group ${userType.toLowerCase()}`}
           </p>
-          <Button
-            variant="destructive"
-            onClick={handleRemoveUser}
-            // className="hover:bg-gray-700 hover:text-gray-50 p-1"
-          >
-            REMOVE
-          </Button>
+          <RemoveAlertDialog handleRemoveUser={handleRemoveUser} />
         </div>
       </PopoverContent>
     </Popover>
