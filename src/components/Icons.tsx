@@ -1,14 +1,18 @@
 import {
   LucideProps,
+  Loader,
+  MoreVertical,
   Plus,
   Search,
   SquareSlash,
   UserCircle,
   X,
 } from 'lucide-react';
-
+<MoreVertical />;
 export const Icons = {
   logoPlaceholder: SquareSlash,
+  loader: Loader,
+  optionsVertical: MoreVertical,
   plus: Plus,
   user: UserCircle,
   search: Search,
