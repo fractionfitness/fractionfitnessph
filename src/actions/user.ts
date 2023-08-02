@@ -70,6 +70,62 @@ export async function addEmployeesToGroupAction(usersToAdd, groupId) {
   return result;
 }
 
+export async function editMember(member, role, status) {
+  // console.log('editing member', member.id, role, status);
+  try {
+    // throw new Error('test error');
+    const result = await prisma.member.update({
+      // if querying by @@unique constraint
+      // where: {
+      //   user_id_group_id: {
+      //     user_id: member.user.id,
+      //     group_id: member.group.id,
+      //   },
+      // },
+      where: { id: member.id },
+      data: {
+        role,
+        // status
+      },
+    });
+    revalidatePath(`/dashboard/group/${member.group.id}/members`);
+    return result;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function removeMember(member) {
+  // console.log('removing member');
+
+  const deletedCheckins = await prisma['member'].update({
+    where: { id: member.id },
+    data: {
+      checkins: {
+        deleteMany: {},
+      },
+    },
+    include: {
+      checkins: true,
+    },
+  });
+  // console.log('deleted checkins', deletedCheckins);
+
+  if (!deletedCheckins) return;
+
+  const removedMember = await prisma['member'].delete({
+    where: { id: member.id },
+    select: {
+      user_id: true,
+      user: { include: { profile: { select: { full_name: true } } } },
+    },
+  });
+  // console.log('removed member', removedMember);
+
+  revalidatePath(`/dashboard/group/${member.group.id}/members`);
+  return removedMember;
+}
+
 // original query based on sadmann7/skateshop repo
 // export async function searchUsersAction2(query: string) {
 //   const name = query.trim();
