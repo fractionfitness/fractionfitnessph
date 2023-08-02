@@ -1,6 +1,10 @@
 import { getAuthSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { MemberRole, MemberStatus } from '@prisma/client';
 import AddUserCommand from '@/components/AddUserCommand';
+import GroupUserOptions from '@/components/GroupUserOptions';
+import { memberContent } from '@/config';
+import { editMember, removeMember } from '@/actions/user';
 
 function Member({ groupUser }) {
   return (
@@ -15,6 +19,16 @@ function Member({ groupUser }) {
       <p className="border border-white rounded-lg pt-2 p-1 px-2">
         {groupUser.role.charAt(0)}
       </p>
+      <GroupUserOptions
+        mode="member"
+        groupUser={groupUser}
+        roles={Object.keys(MemberRole)}
+        statuses={
+          MemberStatus ? Object.keys(MemberStatus) : memberContent.userStatus
+        }
+        editUser={editMember}
+        removeUser={removeMember}
+      />
       {/* add <p>member_status to Model</p> */}
       {/* add member_activity 3-mo moving average of session checkins | should be another column computed by a cronJob */}
       {/* Permissions to edit, delete, and add member should depend on employee's group role */}
