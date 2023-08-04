@@ -126,6 +126,53 @@ export async function removeMember(member) {
   return removedMember;
 }
 
+export async function editEmployeeAction(
+  { user_id, group_id },
+  role,
+  // status,
+) {
+  // console.log('editing employee action');
+  try {
+    const editedEmployee = await prisma.employee.update({
+      where: {
+        user_id_group_id: {
+          user_id,
+          group_id,
+        },
+      },
+      data: {
+        role,
+        // status
+      },
+    });
+    revalidatePath(`/dashboard/group/${group_id}/employees`);
+    return editedEmployee;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function removeEmployeeAction({ user_id, group_id }) {
+  // console.log('removing employee action');
+
+  const removedEmployee = await prisma['employee'].delete({
+    where: {
+      user_id_group_id: {
+        user_id,
+        group_id,
+      },
+    },
+    select: {
+      user_id: true,
+      user: { include: { profile: { select: { full_name: true } } } },
+    },
+  });
+  console.log('removed employee', removedEmployee);
+
+  revalidatePath(`/dashboard/group/${group_id}/employee`);
+  return removedEmployee;
+}
+
 // original query based on sadmann7/skateshop repo
 // export async function searchUsersAction2(query: string) {
 //   const name = query.trim();
