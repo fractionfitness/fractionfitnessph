@@ -1,40 +1,8 @@
 import { getAuthSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { MemberRole, MemberStatus } from '@prisma/client';
 import AddUserCommand from '@/components/AddUserCommand';
-import GroupUserOptions from '@/components/GroupUserOptions';
-import { memberContent } from '@/config';
-import { editMember, removeMember } from '@/actions/user';
-
-function Member({ groupUser }) {
-  return (
-    <div className="w-fit flex flex-row space-x-2 space-y-2">
-      <p></p>
-      <p className="border border-white rounded-lg pt-2  p-1 px-2">
-        {groupUser.userProfile.full_name}
-      </p>
-      <p className="border border-white rounded-lg pt-2 p-1 px-2">
-        {groupUser.group.name}
-      </p>
-      <p className="border border-white rounded-lg pt-2 p-1 px-2">
-        {groupUser.role.charAt(0)}
-      </p>
-      <GroupUserOptions
-        mode="member"
-        groupUser={groupUser}
-        roles={Object.keys(MemberRole)}
-        statuses={
-          MemberStatus ? Object.keys(MemberStatus) : memberContent.userStatus
-        }
-        editUser={editMember}
-        removeUser={removeMember}
-      />
-      {/* add <p>member_status to Model</p> */}
-      {/* add member_activity 3-mo moving average of session checkins | should be another column computed by a cronJob */}
-      {/* Permissions to edit, delete, and add member should depend on employee's group role */}
-    </div>
-  );
-}
+import { DataTable } from '@/components/DataTable';
+import { Member as MemberColumns, columns } from './columns';
 
 export default async function UserGroups({ params: { groupId } }) {
   try {
@@ -56,14 +24,30 @@ export default async function UserGroups({ params: { groupId } }) {
       },
     });
 
-    const groupMembers = group?.members.map((member) => ({
-      // ...member,
-      id: member.id,
-      role: member.role,
-      group,
-      user: { id: member.user.id, email: member.user.email },
-      userProfile: member.user.profile,
-    }));
+    // INSERT FUNCTION HERE THAT GETS ALL OF THE GROUP'S DESCENDANTS AND CREATES A HIERARCHY
+    const groupAndDescendantsNames = [group?.name, 'test group'];
+
+    // const groupMembers = group?.members.map((member) => ({
+    //   // ...member,
+    //   id: member.id,
+    //   role: member.role,
+    //   group,
+    //   user: { id: member.user.id, email: member.user.email },
+    //   userProfile: member.user.profile,
+    // }));
+
+    const groupMembers: MemberColumns[] = group?.members.map(
+      ({ user, role, id }) => ({
+        id, // member id
+        name: user.profile?.full_name!,
+        email: user.email,
+        group: group.name,
+        user_id: user.id,
+        group_id: group.id,
+        role,
+        // status,
+      }),
+    )!;
 
     return (
       <div className="space-y-2">
@@ -71,15 +55,14 @@ export default async function UserGroups({ params: { groupId } }) {
         <p>Group Members</p>
 
         <AddUserCommand mode="member" />
-        {/* <AddUserCommand mode="employment" /> */}
 
-        {groupMembers.length > 0 && (
-          <div className="flex flex-col justify-center">
-            {groupMembers.map((member) => (
-              <Member key={member.id} groupUser={member} />
-            ))}
-          </div>
-        )}
+        <div className="container mx-auto mt-1 mb-1">
+          <DataTable
+            columns={columns}
+            data={groupMembers}
+            groups={groupAndDescendantsNames}
+          />
+        </div>
       </div>
     );
   } catch (err) {

@@ -70,7 +70,11 @@ export async function addEmployeesToGroupAction(usersToAdd, groupId) {
   return result;
 }
 
-export async function editMember(member, role, status) {
+export async function editMemberAction(
+  { user_id, group_id, id },
+  role,
+  status,
+) {
   // console.log('editing member', member.id, role, status);
   try {
     // throw new Error('test error');
@@ -82,24 +86,24 @@ export async function editMember(member, role, status) {
       //     group_id: member.group.id,
       //   },
       // },
-      where: { id: member.id },
+      where: { id },
       data: {
         role,
         // status
       },
     });
-    revalidatePath(`/dashboard/group/${member.group.id}/members`);
+    revalidatePath(`/dashboard/group/${group_id}/members`);
     return result;
   } catch (err) {
     console.error(err);
   }
 }
 
-export async function removeMember(member) {
+export async function removeMemberAction({ user_id, group_id, id }) {
   // console.log('removing member');
 
   const deletedCheckins = await prisma['member'].update({
-    where: { id: member.id },
+    where: { id },
     data: {
       checkins: {
         deleteMany: {},
@@ -114,7 +118,7 @@ export async function removeMember(member) {
   if (!deletedCheckins) return;
 
   const removedMember = await prisma['member'].delete({
-    where: { id: member.id },
+    where: { id },
     select: {
       user_id: true,
       user: { include: { profile: { select: { full_name: true } } } },
@@ -122,7 +126,7 @@ export async function removeMember(member) {
   });
   // console.log('removed member', removedMember);
 
-  revalidatePath(`/dashboard/group/${member.group.id}/members`);
+  revalidatePath(`/dashboard/group/${group_id}/members`);
   return removedMember;
 }
 
