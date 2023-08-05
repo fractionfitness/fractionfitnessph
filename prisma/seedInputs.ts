@@ -4,10 +4,7 @@ import { faker } from '@faker-js/faker';
 // import { hashSync } from 'bcrypt';
 import { hash } from 'bcrypt';
 
-import {
-  generateRandomDateTimeObj,
-  convertToMysqlDatetimeString,
-} from './seedUtils';
+import { generateRandomDateTimeObj } from './seedUtils';
 
 const p = path.join(
   path.dirname(require.main.filename),
