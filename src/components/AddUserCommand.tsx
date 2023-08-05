@@ -39,6 +39,11 @@ export default function AddUserCommand({ mode }) {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
 
+  // need useTransition to implement loading spinner and disab Add Member Button
+  // useEffect and state doesn't work because no way to trigger a reset (using useEffect) of the Add Member Button state when group member list changes or is updated
+  // since AddUserCommand currently doesnt accept prop for Group Members List and no state to store current Group Members
+  const [isPending, startTransition] = useTransition();
+
   const hasValidQuery = Boolean(debouncedQuery.length > 0);
   const hasSearchResults = Boolean(searchResults.length > 0);
   const hasSelectedUsers = Boolean(selectedUsers.length > 0);
@@ -89,6 +94,8 @@ export default function AddUserCommand({ mode }) {
     }
   }, [isOpen]);
 
+  console.count('comp render');
+
   const handleInputChange = (e) => {
     setInputValue(e);
 
@@ -124,19 +131,34 @@ export default function AddUserCommand({ mode }) {
   };
 
   const handleAddButtonClick = (selectedUsers, groupId) => {
+    setIsOpen(false);
     if (mode === 'member') {
-      addMembersToGroupAction(selectedUsers, groupId);
+      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
+      // to remove typescript error, ensure addMembersToGroupAction function doesn't return any value
     }
     if (mode === 'employee') {
-      addEmployeesToGroupAction(selectedUsers, groupId);
+      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
     }
-    setIsOpen(false);
   };
 
   return (
     <>
-      <Button variant="default" onClick={() => setIsOpen(true)}>
+      {/* <Button variant="default" onClick={() => setIsOpen(true)}>
         <Icons.plus className="h-4 w-4 mr-2" aria-hidden="true" />
+        <span className="">Add {userType}</span>
+      </Button> */}
+      <Button
+        // variant="secondary"
+        variant="default"
+        onClick={() => setIsOpen(true)}
+        className="hover:bg-gray-800 hover:text-gray-50 border-gray-700 border p-2"
+        disabled={isPending}
+      >
+        {!isPending ? (
+          <Icons.plus className="h-4 w-4 mr-2" aria-hidden="true" />
+        ) : (
+          <Icons.loader className="mr-2 animate-spin-slow" />
+        )}
         <span className="">Add {userType}</span>
       </Button>
       <CommandDialog
