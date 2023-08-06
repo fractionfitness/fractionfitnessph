@@ -110,3 +110,73 @@ export const getTimeInSecsFromDateObj = ({ hours, mins, secs }) => {
   // return hours * 60 + mins;
   return hours * 60 * 60 + mins * 60 + secs;
 };
+
+// returns true if today is the same day as the session.day
+export const compareDateObjToSessionDay = (dateObj, sessionDay) => {
+  const { dayOfWeek } = convertDateObjValuesToStringValues(
+    getJsDateObjValues(dateObj),
+  );
+  // fix this after adjusting Session model's day field to integer (0-6) representing dayOfTheWeek
+  return dayOfWeek === sessionDay.toLowerCase();
+};
+
+// returns true if current time is in between session interval
+// export const compareCurrentTimeToInterval = ([
+export const isCurrentSession = ([
+  start_at,
+  end_at,
+  current_time = new Date(),
+]) => {
+  const [startSecs, endSecs, currTimeSecs] = [
+    start_at,
+    end_at,
+    current_time,
+  ].map((dateObj) => {
+    return getTimeInSecsFromDateObj(getJsDateObjValues(dateObj));
+  });
+
+  const { time } = convertDateObjValuesToStringValues(
+    getJsDateObjValues(current_time),
+  );
+  console.log('isCurrent compare secs', startSecs, endSecs, currTimeSecs);
+  console.log(
+    'isCurrent compare time',
+    convertTwoDatesToTimeInterval([start_at, end_at]),
+    time,
+    startSecs <= currTimeSecs && currTimeSecs < endSecs,
+  );
+
+  return startSecs <= currTimeSecs && currTimeSecs < endSecs;
+};
+
+export const isUpcomingSession = ([
+  start_at,
+  end_at,
+  current_time = new Date(),
+]) => {
+  const [startSecs, endSecs, currTimeSecs] = [
+    start_at,
+    end_at,
+    current_time,
+  ].map((dateObj) => {
+    return getTimeInSecsFromDateObj(getJsDateObjValues(dateObj));
+  });
+
+  return currTimeSecs < startSecs;
+};
+
+export const isCompletedSession = ([
+  start_at,
+  end_at,
+  current_time = new Date(),
+]) => {
+  const [startSecs, endSecs, currTimeSecs] = [
+    start_at,
+    end_at,
+    current_time,
+  ].map((dateObj) => {
+    return getTimeInSecsFromDateObj(getJsDateObjValues(dateObj));
+  });
+
+  return endSecs <= currTimeSecs;
+};
