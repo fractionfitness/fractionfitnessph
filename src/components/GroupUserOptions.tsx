@@ -206,7 +206,7 @@ export default function GroupUserOptions({
           </div>
           <div className="grid gap-2">
             <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="width">Edit Role</Label>
+              <Label htmlFor="">Edit Role</Label>
               <SelectOptions
                 items={roles}
                 placeholder={`${userType} Roles`}
@@ -215,7 +215,7 @@ export default function GroupUserOptions({
               />
             </div>
             <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="width">Edit Status</Label>
+              <Label htmlFor="">Edit Status</Label>
               <SelectOptions
                 items={statuses}
                 placeholder={`${userType} Status`}
