@@ -1,5 +1,5 @@
 import { getAuthSession } from '@/lib/auth';
-import { convertToMysqlDatetimeString } from '@/prisma/seedUtils';
+import { convertToMysqlDatetimeString } from '@/lib/utils';
 import getUserGroupsSessions from '@/lib/prismaQueries/getUserGroupsSessions';
 
 function GroupSession({ groupSession: { group, session } }) {

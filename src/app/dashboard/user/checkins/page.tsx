@@ -1,5 +1,5 @@
 import { getAuthSession } from '@/lib/auth';
-import { convertToMysqlDatetimeString } from '@/prisma/seedUtils';
+import { convertToMysqlDatetimeString } from '@/lib/utils';
 import { DAY_NAMES } from '@/config';
 import getUserCheckins from '@/lib/prismaQueries/getUserCheckins';
 
@@ -23,7 +23,7 @@ function Checkin({ checkinRecord: { group, checkin, role } }) {
           {'/'}
           <span>{checkin.datetime.getDate()}</span>
         </p>
-        <p className="w-12 capitalize">
+        <p className="w-12">
           {DAY_NAMES[checkin.datetime.getDay()].slice(0, 3)}
         </p>
         {/* <p>Session Id: {session.id}</p> */}
