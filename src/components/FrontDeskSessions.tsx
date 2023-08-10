@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 
 import { DAY_NAMES } from '@/config';
 import {
-  capitalizeFirstChar,
   capitalizeAllWords,
+  convertDateObjValuesToStringValues,
   convertTwoDatesToTimeInterval,
+  getJsDateObjValues,
   isCurrentSession,
   isUpcomingSession,
   isCompletedSession,
+  sortDates,
+  cn,
 } from '@/lib/utils';
 import {
   Card,
@@ -34,47 +37,87 @@ import { ScrollArea } from '@/components/ui-shadcn/ScrollArea';
 import { Button } from '@/components/ui-shadcn/Button';
 
 function categorizeSessions(sessions, dateObj) {
-  console.log('categorizing...');
-  const current = sessions.filter((item) =>
-    isCurrentSession([item.start_at, item.end_at, dateObj]),
+  const current = sortDates(
+    sessions.filter((item) =>
+      isCurrentSession([item.start_at, item.end_at, dateObj]),
+    ),
+    'start_at',
+    'desc',
   );
-  const upcoming = sessions.filter((item) =>
-    isUpcomingSession([item.start_at, item.end_at, dateObj]),
+  const upcoming = sortDates(
+    sessions.filter((item) =>
+      isUpcomingSession([item.start_at, item.end_at, dateObj]),
+    ),
+    'start_at',
+    'asc',
   );
-  const completed = sessions.filter((item) =>
-    isCompletedSession([item.start_at, item.end_at, dateObj]),
+  const completed = sortDates(
+    sessions.filter((item) =>
+      isCompletedSession([item.start_at, item.end_at, dateObj]),
+    ),
+    'end_at',
+    'desc',
   );
 
   return { current, upcoming, completed };
+}
+
+function CheckinsToday({ checkins }) {
+  return (
+    <ScrollArea className="h-48">
+      <p>Today&apos;s Checkins:</p>
+
+      {checkins &&
+        checkins.length > 0 &&
+        checkins.map((item) => {
+          const { time } = convertDateObjValuesToStringValues(
+            getJsDateObjValues(item.datetime),
+          );
+          const { first_name, last_name } = item.member.user.profile;
+          return (
+            <div key={item.id}>
+              <p>
+                <span>checkin: {item.id}</span>{' '}
+                {/* <span>session: {item.session_id}</span>{' '} */}
+                {/* <span>member id: {item.member_id}</span> <span>{time}</span> */}
+                <span>{`${first_name} ${last_name}`}</span> <span>{time}</span>
+                {/* <span>{item.datetime.toString()}</span> */}
+              </p>
+            </div>
+          );
+        })}
+    </ScrollArea>
+  );
 }
 
 function SessionItem({ session }) {
   const { id, day, start_at, end_at, name, group } = session;
   const timeInterval = convertTwoDatesToTimeInterval([start_at, end_at]);
   return (
-    <div>
+    <>
+      {/* <span>{capitalizeFirstChar(day).slice(0, 3)}</span>{' '} */}
       <p>
-        <span>{`${capitalizeFirstChar(day).slice(0, 3)} ${timeInterval}`}</span>{' '}
+        <span>{timeInterval}</span>{' '}
         <span>{capitalizeAllWords(group.name)}</span> <span>{name}</span>
       </p>
-    </div>
+    </>
   );
 }
 
-function SessionStatusCategory({ sessions, header }) {
+function SessionsStatusCategory({ sessions, header }) {
   return (
     <div>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="hover:bg-zinc-700 hover:text-zinc-50 bg-zinc-900 text-zinc-50 p-2 w-32"
+            className="hover:bg-zinc-700 hover:text-zinc-50 bg-zinc-900 text-zinc-50 p-2 w-80"
           >
             {header}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="text-gray-50 bg-zinc-900 w-80">
-          {sessions.length > 0 ? (
+          {sessions && sessions.length > 0 ? (
             sessions.map((session) => {
               return <SessionItem key={session.id} session={session} />;
             })
@@ -83,19 +126,38 @@ function SessionStatusCategory({ sessions, header }) {
           )}
         </PopoverContent>
       </Popover>
-      {sessions.length > 0 && <SessionItem session={sessions[0]} />}
+      {/* show all sessions w/c have the same start time */}
+      {sessions &&
+        sessions.length > 0 &&
+        sessions
+          .filter((item) =>
+            Boolean(sessions[0].start_at.getTime() === item.start_at.getTime()),
+          )
+          .map((item) => <SessionItem key={item.id} session={item} />)}
     </div>
   );
 }
 
-function SessionCard({ sessions, current, upcoming, completed, time }) {
+function SessionCard({
+  sessions,
+  checkins,
+  current,
+  upcoming,
+  completed,
+  time,
+}) {
   return (
-    <Tabs defaultValue="status" className="w-[400px]">
+    <Tabs defaultValue="status" className="w-[420px]">
       {/* CLOCK */}
-      <div className="text-5xl">
-        <span>{DAY_NAMES[time.getDay()].slice(0, 3)}</span>{' '}
-        <span>{time && time.toLocaleTimeString()}</span>
-      </div>
+      {time && (
+        <div className="text-5xl">
+          <span>{DAY_NAMES[time.getDay()].slice(0, 3)}</span>{' '}
+          {/* how to fix width so that time element doesnt keep expanding/contracting because of the change in number chars */}
+          <span className={cn('w-32 min-w-full')}>
+            {time.toLocaleTimeString()}
+          </span>
+        </div>
+      )}
       <TabsList className="grid w-full grid-cols-2 bg-gray-900 text-gray-50 border border-gray-700">
         <TabsTrigger
           value="status"
@@ -120,18 +182,15 @@ function SessionCard({ sessions, current, upcoming, completed, time }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
+            <SessionsStatusCategory sessions={current} header="Current" />
             <hr />
-            <SessionStatusCategory sessions={current} header="Current" />
+            <CheckinsToday checkins={checkins} />
             <hr />
-            <SessionStatusCategory sessions={upcoming} header="Upcoming" />
-            {/* <hr />
-            <SessionStatusCategory sessions={completed} header="Completed" /> */}
-            {/* <SessionStatusCategory sessions={sessions} header="All Sessions" /> */}
+            <SessionsStatusCategory sessions={upcoming} header="Upcoming" />
+            <hr />
+            <SessionsStatusCategory sessions={completed} header="Completed" />
           </CardContent>
-          <CardFooter>
-            {/* <Button>Save changes</Button> */}
-            Footer
-          </CardFooter>
+          <CardFooter>Footer</CardFooter>
         </Card>
       </TabsContent>
       <TabsContent value="allSessions">
@@ -142,10 +201,11 @@ function SessionCard({ sessions, current, upcoming, completed, time }) {
           </CardHeader>
           <CardContent className="space-y-2">
             {/* use scroll area */}
-            {/* <SessionStatusCategory sessions={sessions} header="All Sessions" /> */}
+            {/* <SessionsStatusCategory sessions={sessions} header="All Sessions" /> */}
             <hr />
             <ScrollArea className="h-96">
-              {sessions.length > 0 &&
+              {sessions &&
+                sessions.length > 0 &&
                 sessions.map((session) => {
                   return <SessionItem key={session.id} session={session} />;
                 })}
@@ -159,24 +219,25 @@ function SessionCard({ sessions, current, upcoming, completed, time }) {
   );
 }
 
-export default function FrontDeskSessions({ sessions }) {
+export default function FrontDeskSessions({ sessions, checkins }) {
   // console.log('comp render');
 
   //---------------------------------------------------------------------
-  // DELETE AFTER TESTING
-  // August 5, 2023 14:30
-  const [secs, setSecs] = useState(() => 57);
-  const dateObj = [2023, 7, 5, 16, 29, secs] as const;
-  // memoize???
-  const time = new Date(...dateObj);
+  // HIDE AFTER TESTING
+  // August 9, 2023 17:29:57
+  // const [secs, setSecs] = useState(() => 55);
+  // const dateObj = [2023, 7, 10, 17, 29, secs] as const;
+  // const time = new Date(...dateObj);
+  // const [mins, setMins] = useState(() => time.getMinutes());
   //---------------------------------------------------------------------
 
-  //---------------------------------------------------------------------
-  // const dateObj = [];
-  // const [time, setTime] = useState(null);
-  //---------------------------------------------------------------------
+  // not recommended to mix side effects and state
+  // better to let useEffect handle comp synchronization of side effects like 'new Date()'
+  // const [time, setTime] = useState(new Date());
+  // const [mins, setMins] = useState(() => time.getMinutes());
 
-  const [mins, setMins] = useState(() => time.getMinutes());
+  const [time, setTime] = useState(null);
+  const [mins, setMins] = useState(null);
   const [current, setCurrent] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
   const [completed, setCompleted] = useState([]);
@@ -196,11 +257,10 @@ export default function FrontDeskSessions({ sessions }) {
     const interval = window.setInterval(() => {
       //----------------------------
       // TEST
-      setSecs((s) => s + 1);
+      // setSecs((s) => s + 1);
       //----------------------------
 
-      // setTime(new Date())
-      // setTime(time);
+      setTime(new Date());
     }, 1000);
 
     handleChangeInMins();
@@ -209,7 +269,9 @@ export default function FrontDeskSessions({ sessions }) {
   }, []);
 
   useEffect(() => {
-    const currentMins = time ? time.getMinutes() : null;
+    if (!time) return;
+
+    const currentMins = time.getMinutes();
     if (!currentMins || mins === currentMins) return;
 
     // only execute below if minutes have changed, disregarding change in secs
@@ -219,36 +281,13 @@ export default function FrontDeskSessions({ sessions }) {
   }, [mins, time, sessions]);
 
   return (
-    <>
-      <SessionCard
-        sessions={sessions}
-        current={current}
-        upcoming={upcoming}
-        completed={completed}
-        time={time}
-      />
-
-      {/* INSERT CHECK-IN COMPONENT */}
-
-      {/* <hr />
-      <Label>Upcoming</Label>
-      {upcoming.length > 0 &&
-        upcoming.map((session) => {
-          return <FrontDeskSession key={session.id} session={session} />;
-        })}
-      <hr />
-      <Label>Completed</Label>
-      {completed.length > 0 &&
-        completed.map((session) => {
-          return <FrontDeskSession key={session.id} session={session} />;
-        })}
-      <hr />
-
-      <Label>Today</Label>
-      {sessions.length > 0 &&
-        sessions.map((session) => {
-          return <FrontDeskSession key={session.id} session={session} />;
-        })} */}
-    </>
+    <SessionCard
+      sessions={sessions}
+      checkins={checkins}
+      current={current}
+      upcoming={upcoming}
+      completed={completed}
+      time={time}
+    />
   );
 }
