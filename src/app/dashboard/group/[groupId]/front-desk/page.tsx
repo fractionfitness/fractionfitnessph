@@ -11,6 +11,7 @@ import {
 } from '@/lib/utils';
 
 import FrontDeskSessions from '@/components/FrontDeskSessions';
+import FrontDeskCheckin from '@/components/FrontDeskCheckin';
 
 export default async function Page({ params }) {
   try {
@@ -145,6 +146,7 @@ export default async function Page({ params }) {
             sessions={group.sessions}
             checkins={todayMemberCheckins ?? []}
           />
+          <FrontDeskCheckin sessions={group.sessions} />
         </div>
       </div>
     );
