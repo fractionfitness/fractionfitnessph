@@ -4,6 +4,40 @@ import { revalidatePath } from 'next/cache';
 
 import prisma from '@/lib/prisma';
 
+// temporary solution for the member search bar
+// members should just be passed to the checkin component beforehand and just a filter function on the array
+// diff function to be used to search guests(no accounts) and visitors(users w/ accounts but not a member)
+export async function searchMemberAction(
+  query: string,
+  groupId: number | null,
+) {
+  // console.log('searching members...', query, groupId);
+  if (query.length === 0 || !groupId) return null;
+
+  const matchingMembers = await prisma.member.findMany({
+    where: {
+      group_id: groupId,
+      user: {
+        profile: {
+          full_name: {
+            contains: query,
+          },
+        },
+      },
+    },
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
+    },
+  });
+
+  if (!matchingMembers) return null;
+  return matchingMembers;
+}
+
 export async function addUsersToGroupMembershipAction(usersToAdd, groupId) {
   const members = usersToAdd.map((user) => ({
     user_id: user.id,
