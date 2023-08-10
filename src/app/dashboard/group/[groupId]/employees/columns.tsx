@@ -4,7 +4,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { EmployeeRole, EmployeeStatus } from '@prisma/client';
 import { employeeContent } from '@/config';
-import { editEmployeeAction, removeEmployeeAction } from '@/actions/user';
+import { editEmployeeAction, removeEmployeeAction } from '@/actions/employee';
 import { Icons } from '@/components/Icons';
 import { Button } from '@/components/ui-shadcn/Button';
 import {

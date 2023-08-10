@@ -5,11 +5,9 @@ import { useParams } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/use-debounce';
-import {
-  searchUsersAction,
-  addMembersToGroupAction,
-  addEmployeesToGroupAction,
-} from '@/actions/user';
+import { searchUsersAction } from '@/actions/user';
+import { addUsersToGroupMembershipAction } from '@/actions/member';
+import { addUsersToGroupEmploymentAction } from '@/actions/employee';
 
 import {
   CommandDialog,
@@ -133,11 +131,15 @@ export default function AddUserCommand({ mode }) {
   const handleAddButtonClick = (selectedUsers, groupId) => {
     setIsOpen(false);
     if (mode === 'member') {
-      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
-      // to remove typescript error, ensure addMembersToGroupAction function doesn't return any value
+      startTransition(() =>
+        addUsersToGroupMembershipAction(selectedUsers, groupId),
+      );
+      // to remove typescript error, ensure addUsersToGroupMembershipAction function doesn't return any value
     }
     if (mode === 'employee') {
-      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
+      startTransition(() =>
+        addUsersToGroupEmploymentAction(selectedUsers, groupId),
+      );
     }
   };
 
