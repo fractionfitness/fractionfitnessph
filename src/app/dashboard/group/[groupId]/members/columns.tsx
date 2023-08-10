@@ -4,7 +4,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { MemberRole, MemberStatus } from '@prisma/client';
 import { memberContent } from '@/config';
-import { editMemberAction, removeMemberAction } from '@/actions/user';
+import { editMemberAction, removeMemberAction } from '@/actions/member';
 import { Icons } from '@/components/Icons';
 import { Button } from '@/components/ui-shadcn/Button';
 import {
