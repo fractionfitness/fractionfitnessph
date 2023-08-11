@@ -4,6 +4,8 @@ import { getAuthSession } from '@/lib/auth';
 import { buttonVariants } from '@/components/ui-shadcn/Button';
 import getUserGroups from '@/lib/prismaQueries/getUserGroups';
 
+export const dynamic = 'force-dynamic';
+
 function GroupLink({ group }) {
   return (
     <div className="w-fit border border-white">

@@ -2,6 +2,8 @@ import { getAuthSession } from '@/lib/auth';
 import { convertToMysqlDatetimeString } from '@/lib/utils';
 import getUserGroupsSessions from '@/lib/prismaQueries/getUserGroupsSessions';
 
+export const dynamic = 'force-dynamic';
+
 function GroupSession({ groupSession: { group, session } }) {
   const sessionStart = convertToMysqlDatetimeString(session.start_at).slice(
     11,
