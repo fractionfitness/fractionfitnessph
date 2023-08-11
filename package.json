@@ -12,7 +12,8 @@
     "db:reset": "prisma db push && prisma db seed",
     "lint": "next lint",
     "format": "prettier '**/*.{js,jsx,cjs,ts,tsx,css,scss,sass,md}' --cache --write",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node -P tsconfig-seed.json -r tsconfig-paths/register --transpileOnly prisma/seed.ts"
