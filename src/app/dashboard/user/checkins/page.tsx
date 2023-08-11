@@ -3,6 +3,8 @@ import { convertToMysqlDatetimeString } from '@/lib/utils';
 import { DAY_NAMES } from '@/config';
 import getUserCheckins from '@/lib/prismaQueries/getUserCheckins';
 
+export const dynamic = 'force-dynamic';
+
 function Checkin({ checkinRecord: { group, checkin, role } }) {
   const { session } = checkin;
 
