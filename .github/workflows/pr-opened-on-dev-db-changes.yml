@@ -1,0 +1,68 @@
+name: Pull Request Opened on Dev Branch w/ DB changes
+
+on:
+  pull_request:
+    # branches: [feat/no-ref/cicd-setup, test-pr]
+    branches: [staging]
+    types: [opened]
+    paths: ['prisma/schema.prisma']
+  push:
+    branches: [cicd-test]
+
+# env:
+# VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+# VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  build:
+    environment: Preview
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Values
+        run: |
+          echo "$VERCEL_ORG_ID"
+          echo "$VERCEL_PROJECT_ID"
+        # not set in github runner
+        # echo "${VERCEL_URL}"
+        # echo $VERCEL_URL
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Check Values
+        run: |
+          echo "${DATABASE_URL}"
+          echo "${NEXTAUTH_URL}"
+          echo "${NEXTAUTH_SECRET}"
+      - name: Build Project Artifacts
+        run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      - name:
+        run: |
+          echo $VERCEL_URL
+          echo
+      - name: Deploy Project Artifacts to Vercel
+        run: |
+          echo $VERCEL_URL
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
+        # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) since not yet known during build step (previous step)
+        # will only get VERCEL_URL during deploy
+        # run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+# pscale create  branch: pr-refnum | on db: ffph_dev | uname: fractionfitness2021-bak
+# pscale deploy request
+# pscale get connection string and use in vercel deployment of feat-refnum-*
+
