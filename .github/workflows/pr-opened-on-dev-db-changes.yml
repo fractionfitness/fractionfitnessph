@@ -9,16 +9,18 @@ on:
   push:
     branches: [cicd-test]
 
-# env:
-# VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-# VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+env:
+  VERCEL_ENV: preview
+  # VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  # VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   build:
-    environment: Preview
+    environment: Preview # Github Environment
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
     runs-on: ubuntu-latest
     steps:
       - name: Check Values
@@ -50,17 +52,30 @@ jobs:
           echo "${NEXTAUTH_SECRET}"
       - name: Build Project Artifacts
         run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - name:
+      - name: check url
         run: |
           echo $VERCEL_URL
-          echo
       - name: Deploy Project Artifacts to Vercel
         run: |
           echo $VERCEL_URL
-          vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
         # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) since not yet known during build step (previous step)
-        # will only get VERCEL_URL during deploy
+        # can only get VERCEL_URL after deploy
         # run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Extract branch name
+        id: extract_branch
+        # shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        # https://stackoverflow.com/questions/58033366/how-to-get-the-current-branch-within-github-actions
+      - name: Add Env Var to Preview Deployment on branch w/ opened PR
+        run: |
+          echo ${{ steps.extract_branch.outputs.branch }}
+          vercel env add NEXTAUTH_URL preview ${{ steps.extract_branch.outputs.branch }} < deployment-url.txt --token=${{ secrets.VERCEL_TOKEN }}
+        # remove env variable if already exists for branch
+        # vercel env rm --yes NEXTAUTH_URL ${{ env.VERCEL_ENV }} ${{ steps.extract_branch.outputs.branch }} --token=${{ secrets.VERCEL_TOKEN }}
+        # run: vercel env add [env-name] [environment=preview] [gitbranch=gh-actions-vars] < file
+        # ref: https://vercel.com/docs/cli/env
+        # need a bash script to check if NEXTAUTH_URL already defined for preview pr branch, then remove it if present otherwise proceed directly to adding it
 
 # pscale create  branch: pr-refnum | on db: ffph_dev | uname: fractionfitness2021-bak
 # pscale deploy request
