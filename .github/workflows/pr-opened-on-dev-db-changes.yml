@@ -58,7 +58,7 @@ jobs:
       #   run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project to Vercel
         run: |
-          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt 2 > error.txt
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
           bash ./vercel-check-deploy.sh
         # vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
         # echo "env.VERCEL_ENV ${{ env.VERCEL_ENV }}"
