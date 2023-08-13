@@ -58,8 +58,8 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         run: |
           echo $VERCEL_URL
-          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
-        # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) since not yet known during build step (previous step)
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+        # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) not yet known during build step (previous step)
         # can only get VERCEL_URL after deploy
         # run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
       - name: Extract branch name
