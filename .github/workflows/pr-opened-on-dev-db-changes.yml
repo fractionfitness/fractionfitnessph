@@ -52,23 +52,25 @@ jobs:
           echo "${VERCEL_ENV}"
           echo "https://{VERCEL_URL}"
           echo "https://${VERCEL_URL}"
-      - name: Build Project Artifacts
-        run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Check Values after vercel build
-        run: |
-          echo "${DATABASE_URL}"
-          echo "${NEXTAUTH_URL}"
-          echo "${NEXTAUTH_SECRET}"
-          echo $VERCEL_URL
-          echo "${VERCEL_URL}"
-          echo "${VERCEL_ENV}"
-          echo "https://{VERCEL_URL}"
-          echo "https://${VERCEL_URL}"
-      - name: Deploy Project Artifacts to Vercel
+      # Better to build in Vercel so that it has access to System Environment Variables
+      # - name: Build Project Artifacts
+      #   run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      # - name: Check Values after vercel build
+      #   run: |
+      #     echo "${DATABASE_URL}"
+      #     echo "${NEXTAUTH_URL}"
+      #     echo "${NEXTAUTH_SECRET}"
+      #     echo $VERCEL_URL
+      #     echo "${VERCEL_URL}"
+      #     echo "${VERCEL_ENV}"
+      #     echo "https://{VERCEL_URL}"
+      #     echo "https://${VERCEL_URL}"
+      - name: Deploy Project to Vercel
         run: |
           vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
           echo "${DATABASE_URL}"
           echo "${NEXTAUTH_URL}"
+          echo "${NEXTAUTH_SECRET}"
           echo $VERCEL_URL
           echo "${VERCEL_URL}"
           echo "${VERCEL_ENV}"
