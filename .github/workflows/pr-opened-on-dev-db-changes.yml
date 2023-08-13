@@ -17,9 +17,9 @@ on:
 jobs:
   build:
     # environment: preview # Github Environment
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    # env:
+    #   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+    #   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
     runs-on: ubuntu-latest
     steps:
@@ -40,22 +40,10 @@ jobs:
         run: npm ci
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Check Values after vercel env pull
-        run: |
-          echo "${DATABASE_URL}"
-          echo "${NEXTAUTH_URL}"
-          echo "${NEXTAUTH_SECRET}"
-          echo $VERCEL_URL
-          echo "${VERCEL_URL}"
-          echo "${VERCEL_ENV}"
-          echo "https://{VERCEL_URL}"
-          echo "https://${VERCEL_URL}"
-      # Better to build in Vercel so that it has access to System Environment Variables
-      # - name: Build Project Artifacts
-      #   run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      # - name: Check Values after vercel build
+      # not needed since building directly in Vercel
+      # - name: Pull Vercel Environment Information
+      #   run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      # - name: Check Values after vercel env pull
       #   run: |
       #     echo "${DATABASE_URL}"
       #     echo "${NEXTAUTH_URL}"
@@ -65,17 +53,14 @@ jobs:
       #     echo "${VERCEL_ENV}"
       #     echo "https://{VERCEL_URL}"
       #     echo "https://${VERCEL_URL}"
+      # Better to build in Vercel so that it has access to System Environment Variables and no need to define NEXTAUTH_URL
+      # reference: https://next-auth.js.org/configuration/options
+      # - name: Build Project Artifacts
+      #   run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project to Vercel
         run: |
-          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
-          echo "${DATABASE_URL}"
-          echo "${NEXTAUTH_URL}"
-          echo "${NEXTAUTH_SECRET}"
-          echo $VERCEL_URL
-          echo "${VERCEL_URL}"
-          echo "${VERCEL_ENV}"
-          echo "https://{VERCEL_URL}"
-          echo "https://${VERCEL_URL}"
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
+        # vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
         # echo "env.VERCEL_ENV ${{ env.VERCEL_ENV }}"
         # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) not yet known during build step (previous step)
         # can only get VERCEL_URL after deploy
