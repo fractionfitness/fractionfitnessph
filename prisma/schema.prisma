@@ -196,7 +196,7 @@ model MemberCheckin {
 
 // add Holidays/Day-offs/CancelledSessions Model
 
-model Tester {
-  id   Int    @id @default(autoincrement())
-  name String
-}
+// model Tester {
+//   id   Int    @id @default(autoincrement())
+//   name String
+// }
