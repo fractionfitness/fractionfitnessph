@@ -52,6 +52,17 @@ jobs:
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        # with:
+        #   fetch-depth: 0
+      - name: Get changed files
+        id: changes
+        run: |
+          echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
+          echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
+          echo "changed files base - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
+          echo "changed files base - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
       - name: Check Env Values
         run: |
           echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
@@ -64,12 +75,16 @@ jobs:
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref): ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref): ${{ github.event.pull_request.base.ref }}"
+          echo "Current Branch (head.sha): ${{ github.event.pull_request.head.sha }}"
+          echo "Target Branch (base.sha): ${{ github.event.pull_request.base.sha }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
       - name: Install Planetscale CLI
         run: |
           echo "installing planetscale cli"
-  # vercel env add DATABASE_URL for the branch
+  # vercel env add DATABASE_URL for the branch (ffph_dev main if no changes | ffph_dev pr-refnum iw w/changes)
+  # vercel deploy
+
   # on approved pr and merged branch into dev
   # approve deploy request
   # delete pr branch
@@ -94,8 +109,6 @@ jobs:
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref) pull_request: ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref) pull_request: ${{ github.event.pull_request.base.ref }}"
-          echo "Current Branch (head.ref) pull_request_target: ${{ github.event.pull_request_target.head.ref }}"
-          echo "Target Branch (base.ref) pull_request_target: ${{ github.event.pull_request_target.base.ref }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
       - name: Approve Pscale Deploy Request
