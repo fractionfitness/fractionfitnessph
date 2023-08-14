@@ -34,7 +34,7 @@ env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
-  ORG_NAME: ${{ vars.ORG_NAME }}
+  PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
 
   # cannot be accessed here since environment specific
   # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
@@ -120,7 +120,7 @@ jobs:
         uses: planetscale/create-branch-action@v4
         id: create_branch
         with:
-          org_name: ${{ env.ORG_NAME }}
+          org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
           branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
           from: ${{ env.PSCALE_SRC_BRANCH }}
