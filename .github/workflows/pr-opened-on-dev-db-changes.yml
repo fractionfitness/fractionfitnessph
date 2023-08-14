@@ -113,18 +113,28 @@ jobs:
           echo "Target Branch (base.sha): ${{ github.event.pull_request.base.sha }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
-      # - name: Planetscale Setup
-      #   uses: planetscale/setup-pscale-action@v1
       - name: Planetscale Create Branch
         if: needs.changed-files.outputs.PRISMA_CHANGE
-        uses: planetscale/create-branch-action@v4
         id: create_branch
+        uses: planetscale/create-branch-action@v4
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
           branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
           from: ${{ env.PSCALE_SRC_BRANCH }}
           wait: true
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Planetscale Branch Password Create & Prisma Connection String
+        run: |
+          pscale version
+          pscale password create ${PSCALE_DB_NAME} "pr-${GITHUB_PR_REFNUM}" "ffph-dev-pr-${GITHUB_PR_REFNUM}-admin" --role admin --org ${PSCALE_ORG_NAME} -f json --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID >pscale-branch-pword.txt 2>pscale-branch-pword-error.txt
+          cat pscale-branch-pword.txt
+
+      # get pscale connection string of newly created branch on ffph_dev
+      # prisma db push
+      # create deploy request
+
       - name: With DB Changes
         if: needs.changed-files.outputs.PRISMA_CHANGE
         run: |
