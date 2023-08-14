@@ -1,86 +1,205 @@
 name: Pull Request Opened on Dev Branch w/ DB changes
 
 on:
+  # to manually trigger if I somehow missed an activity type
+  workflow_dispatch:
   pull_request:
     # branches: [feat/no-ref/cicd-setup, test-pr]
-    branches: [staging]
-    types: [opened]
-    paths: ['prisma/schema.prisma']
-  push:
-    branches: [cicd-test]
+    branches: [dev]
+    types:
+      [
+        opened,
+        synchronize,
+        edited,
+        reopened,
+        ready_for_review,
+        unlocked,
+        review_requested,
+      ]
+  pull_request_target:
+    # branches: [dev]
+    types: [closed]
+  # paths: ['prisma/schema.prisma']
+  # types: [opened, reopened, edited, submitted]
+  # pull_request_review.submitted: run when an approving review is submitted for an opened pr
+  # push:
+  #   branches: [cicd-test]
 
-# env:
-#   VERCEL_ENV: preview
-#   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-#   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+# insert environment variable
+
+env:
+  GITHUB_PR_REFNUM: ${{ github.event.pull_request.number }}
+  GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
+  # cannot be accessed here since environment specific
+  # PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+  # PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+  # PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+
+  # VERCEL_ENV: preview
 
 jobs:
-  build:
-    # environment: preview # Github Environment
+  # on opened pr targeting dev
+  pscale-create-pr-branch-deploy-request:
+    if: github.event.pull_request.merged == false
+    environment: preview # Github Environment
     env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
+      PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
     runs-on: ubuntu-latest
     steps:
       - name: Check Env Values
         run: |
-          echo "$VERCEL_ORG_ID"
-          echo "$VERCEL_PROJECT_ID"
-      - name: Get code
-        uses: actions/checkout@v3
-      - name: Cache dependencies
-        id: cache
-        uses: actions/cache@v3
-        with:
-          path: ./node_modules
-          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: npm ci
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-      # - name: Pull Vercel Environment Information
-      #   run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-      # - name: Check Values after vercel env pull
-      #   run: |
-      #     echo "${DATABASE_URL}"
-      #     echo "${NEXTAUTH_URL}"
-      #     echo "${NEXTAUTH_SECRET}"
-      #     echo $VERCEL_URL
-      #     echo "${VERCEL_URL}"
-      #     echo "${VERCEL_ENV}"
-      #     echo "https://{VERCEL_URL}"
-      #     echo "https://${VERCEL_URL}"
-      # Better to build in Vercel so that it has access to System Environment Variables and no need to define NEXTAUTH_URL
-      # reference: https://next-auth.js.org/configuration/options
-      # - name: Build Project Artifacts
-      #   run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy Project to Vercel
+          echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
+          echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
+          echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
+          echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
+          echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
+          echo "PSCALE_TOKEN_ID ${PSCALE_TOKEN_ID}"
+          echo "PSCALE_TOKEN ${PSCALE_TOKEN}"
+          echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
+          echo "Current Branch (head.ref): ${{ github.event.pull_request.head.ref }}"
+          echo "Target Branch (base.ref): ${{ github.event.pull_request.base.ref }}"
+          echo "PR merged? ${{ github.event.pull_request.merged }}"
+          echo "PR state? ${{ github.event.pull_request.state }}"
+      - name: Install Planetscale CLI
         run: |
-          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
-          bash ./shell-scripts/vercel-check-deploy.sh
-        # vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
-        # echo "env.VERCEL_ENV ${{ env.VERCEL_ENV }}"
-        # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) not yet known during build step (previous step)
-        # can only get VERCEL_URL after deploy
-        # run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
-      # - name: Extract branch name
-      #   id: extract_branch
-      #   # shell: bash
-      #   run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-      #   # https://stackoverflow.com/questions/58033366/how-to-get-the-current-branch-within-github-actions
-      # - name: Add Env Var to Preview Deployment on branch w/ opened PR
-      #   run: |
-      #     echo ${{ steps.extract_branch.outputs.branch }}
-      #     vercel env add NEXTAUTH_URL preview ${{ steps.extract_branch.outputs.branch }} < deployment-url.txt --token=${{ secrets.VERCEL_TOKEN }}
-      # remove env variable if already exists for branch
-      # vercel env rm --yes NEXTAUTH_URL ${{ env.VERCEL_ENV }} ${{ steps.extract_branch.outputs.branch }} --token=${{ secrets.VERCEL_TOKEN }}
-      # run: vercel env add [env-name] [environment=preview] [gitbranch=gh-actions-vars] < file
-      # ref: https://vercel.com/docs/cli/env
-      # need a bash script to check if NEXTAUTH_URL already defined for preview pr branch, then remove it if present otherwise proceed directly to adding it
+          echo "installing planetscale cli"
+  # vercel env add DATABASE_URL for the branch
+  # on approved pr and merged branch into dev
+  # approve deploy request
+  # delete pr branch
+  pscale-merge-pr-branch-approve-deploy-request:
+    if: github.event.pull_request.merged == true
+    environment: preview
+    env:
+      PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Env Values
+        run: |
+          echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
+          echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
+          echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
+          echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
+          echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
+          echo "PSCALE_TOKEN_ID ${PSCALE_TOKEN_ID}"
+          echo "PSCALE_TOKEN ${PSCALE_TOKEN}"
+          echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
+          echo "Current Branch (head.ref) pull_request: ${{ github.event.pull_request.head.ref }}"
+          echo "Target Branch (base.ref) pull_request: ${{ github.event.pull_request.base.ref }}"
+          echo "Current Branch (head.ref) pull_request_target: ${{ github.event.pull_request.head.ref }}"
+          echo "Target Branch (base.ref) pull_request_target: ${{ github.event.pull_request.base.ref }}"
+          echo "PR merged? ${{ github.event.pull_request_target.merged }}"
+          echo "PR state? ${{ github.event.pull_request_target.state }}"
+      - name: Approve Pscale Deploy Request
+        run: |
+          echo "Pull Request has been merged into Github Dev Branch"
+          echo "approving pscale deploy request from pr branch into main branch on ffph_dev db"
+      - name: Delete Pscale ffph_dev pr branch
+        run: |
+          echo "Deleting pr branch on ffph_dev db"
 
-# pscale create  branch: pr-refnum | on db: ffph_dev | uname: fractionfitness2021-bak
-# pscale deploy request
-# pscale get connection string and use in vercel deployment of feat-refnum-*
+  # vercel-deploy-feat-with-opened-pr:
+  #   environment: preview
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check Env Values
+  #       run: |
+  #         echo ${GITHUB_PR_REFNUM}
+  #         echo ${GITHUB_PR_TITLE}
+  #         echo ${VERCEL_ORG_ID}
+  #         echo ${VERCEL_PROJECT_ID}
+  #         echo ${PSCALE_SRC_BRANCH}
+  #     - name: Get code
+  #       uses: actions/checkout@v3
+  #     - name: Cache dependencies
+  #       id: cache
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ./node_modules
+  #         key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+  #     - name: Install dependencies
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       run: npm ci
+  #     - name: Install Vercel CLI
+  #       run: npm install --global vercel@latest
+  #     # - name: Pull Vercel Environment Information
+  #     #   run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+  #     # - name: Check Values after vercel env pull
+  #     #   run: |
+  #     #     echo "${DATABASE_URL}"
+  #     #     echo "${NEXTAUTH_URL}"
+  #     #     echo "${NEXTAUTH_SECRET}"
+  #     #     echo $VERCEL_URL
+  #     #     echo "${VERCEL_URL}"
+  #     #     echo "${VERCEL_ENV}"
+  #     #     echo "https://{VERCEL_URL}"
+  #     #     echo "https://${VERCEL_URL}"
+  #     # Better to build in Vercel so that it has access to System Environment Variables and no need to define NEXTAUTH_URL
+  #     # reference: https://next-auth.js.org/configuration/options
+  #     # - name: Build Project Artifacts
+  #     #   run: npm run postinstall && vercel build --token=${{ secrets.VERCEL_TOKEN }}
+  #     - name: Deploy Project to Vercel
+  #       run: |
+  #         vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+  #         bash ./shell-scripts/vercel-check-deploy.sh
+  #       # vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+  #       # echo "env.VERCEL_ENV ${{ env.VERCEL_ENV }}"
+  #       # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) not yet known during build step (previous step)
+  #       # can only get VERCEL_URL after deploy
+  #       # run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+  #     # - name: Extract branch name
+  #     #   id: extract_branch
+  #     #   # shell: bash
+  #     #   run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+  #     #   # https://stackoverflow.com/questions/58033366/how-to-get-the-current-branch-within-github-actions
+  #     # - name: Add Env Var to Preview Deployment on branch w/ opened PR
+  #     #   run: |
+  #     #     echo ${{ steps.extract_branch.outputs.branch }}
+  #     #     vercel env add NEXTAUTH_URL preview ${{ steps.extract_branch.outputs.branch }} < deployment-url.txt --token=${{ secrets.VERCEL_TOKEN }}
+  #     # remove env variable if already exists for branch
+  #     # vercel env rm --yes NEXTAUTH_URL ${{ env.VERCEL_ENV }} ${{ steps.extract_branch.outputs.branch }} --token=${{ secrets.VERCEL_TOKEN }}
+  #     # run: vercel env add [env-name] [environment=preview] [gitbranch=gh-actions-vars] < file
+  #     # ref: https://vercel.com/docs/cli/env
+  #     # need a bash script to check if NEXTAUTH_URL already defined for preview pr branch, then remove it if present otherwise proceed directly to adding it
 
+  # # pscale create  branch: pr-refnum | on db: ffph_dev | uname: fractionfitness2021-bak
+  # # pscale deploy request
+  # # pscale get connection string and use in vercel deployment of feat-refnum-*
+
+  # vercel-deploy-dev-after-merged-pr:
+  #   if: github.event.pull_request.merged == true
+  #   environment: preview
+  #   needs: pscale-merge-pr-branch
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check Env Values
+  #       run: |
+  #         echo ${GITHUB_PR_REFNUM}
+  #         echo ${GITHUB_PR_TITLE}
+  #         echo ${VERCEL_ORG_ID}
+  #         echo ${VERCEL_PROJECT_ID}
+  #         echo ${PSCALE_SRC_BRANCH}
+  #     - name: Get code
+  #       uses: actions/checkout@v3
+  #     - name: Cache dependencies
+  #       id: cache
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ./node_modules
+  #         key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+  #     - name: Install dependencies
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       run: npm ci
+  #     - name: Install Vercel CLI
+  #       run: npm install --global vercel@latest
+  #     - name: Deploy Project to Vercel
+  #       run: |
+  #         vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+  #         bash ./shell-scripts/vercel-check-deploy.sh
