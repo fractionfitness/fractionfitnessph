@@ -59,7 +59,7 @@ jobs:
       - name: Deploy Project to Vercel
         run: |
           vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
-          bash ./vercel-check-deploy.sh
+          bash ./shell-scripts/vercel-check-deploy.sh
         # vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
         # echo "env.VERCEL_ENV ${{ env.VERCEL_ENV }}"
         # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) not yet known during build step (previous step)
