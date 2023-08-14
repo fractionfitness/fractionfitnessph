@@ -128,13 +128,13 @@ jobs:
       - name: Get create branch output
         run: |
           echo "Branch create outputs: ${{ steps.create_branch.outputs }}"
-          echo "Branch create output number: ${{ steps.create_branch.outputs.number }}"
+        # per docs: no output variables
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
       - name: Planetscale Branch Password Create & Prisma Connection String
         run: |
           pscale version
-          pscale password create ${PSCALE_DB_NAME} "pr-${GITHUB_PR_REFNUM}" "ffph-dev-pr-${GITHUB_PR_REFNUM}-admin" --role admin --org ${PSCALE_ORG_NAME} -f json --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID >pscale-branch-pword.txt 2>pscale-branch-pword-error.txt
+          pscale password create ${PSCALE_DB_NAME} "pr-${GITHUB_PR_REFNUM}" "ffph-dev-pr-${GITHUB_PR_REFNUM}-admin" --role admin --org ${PSCALE_ORG_NAME} -f json --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID} >pscale-branch-pword.txt 2>pscale-branch-pword-error.txt
           cat pscale-branch-pword.txt
       - name: Create a deploy request
         id: create_deploy_request
