@@ -47,8 +47,8 @@ jobs:
     if: github.event.pull_request.state != 'closed' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
-      all: ${{ steps.changes.outputs.all }}
-      prisma: ${{ steps.changes.outputs.prisma }}
+      ALL_CHANGES: ${{ steps.changes.outputs.ALL_CHANGES }}
+      PRISMA_CHANGE: ${{ steps.changes.outputs.PRISMA_CHANGE }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -60,11 +60,25 @@ jobs:
       - name: Get changed files
         id: changes
         run: |
-          echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
-          echo "::set-output name=prisma::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
-        # no diff since github.sha is the same as head.sha
-        # echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
-        # echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
+          echo "ALL_CHANGES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)" >> "${GITHUB_OUTPUT}"
+          echo "PRISMA_CHANGE=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)" >> "${GITHUB_OUTPUT}"
+      # - name: Set outputs as step-level env vars
+      #   env:
+      #     ALL_CHANGES: ${{ steps.changes.outputs.ALL_CHANGES }}
+      #     PRISMA_CHANGE: ${{ steps.changes.outputs.PRISMA_CHANGE }}
+      #   run: |
+      #     echo "check env output - prisma: ${PRISMA_CHANGE} - all: ${ALL_CHANGES}"
+      # # doesnt work since step-level env vars
+      # - name: Get outputs stet as step-level env vars
+      #   run: |
+      #     echo "check env output - prisma: ${PRISMA_CHANGE} - all: ${ALL_CHANGES}"
+
+      # echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
+      # echo "::set-output name=prisma::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
+
+      # no diff since github.sha is the same as head.sha
+      # echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
+      # echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
 
   # on opened pr targeting dev
 
@@ -81,8 +95,8 @@ jobs:
     steps:
       - name: Check Env Values
         run: |
-          echo "with db changes? ${{ needs.changed-files.outputs.prisma }}"
-          echo "all changes: ${{ needs.changed-files.outputs.all }}"
+          echo "with db changes? ${{ needs.changed-files.outputs.PRISMA_CHANGE }}"
+          echo "all changes: ${{ needs.changed-files.outputs.ALL_CHANGES }}"
           echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
           echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
@@ -101,14 +115,14 @@ jobs:
         run: |
           echo "installing planetscale cli"
       - name: With DB Changes
-        if: needs.changed-files.outputs.prisma
+        if: needs.changed-files.outputs.PRISMA_CHANGE
         run: |
           echo "running step for with db changes"
       - name: Without DB Changes
         # converts output into String(Boolean) and then can be compared to 'false'
-        # if: ${{ !needs.changed-files.outputs.prisma }} == 'false'
-        # or check if empty string '' meaning no value
-        if: needs.changed-files.outputs.prisma == ''
+        # if: ${{ !needs.changed-files.outputs.PRISMA_CHANGE }} == 'false'
+        # or check if empty string '' meaning no value | ! operator doesn't work at step-level conditional
+        if: needs.changed-files.outputs.PRISMA_CHANGE == ''
         run: |
           echo "running step for no db changes"
   # vercel env add DATABASE_URL for the branch (ffph_dev main if no changes | ffph_dev pr-refnum iw w/changes)
@@ -117,7 +131,7 @@ jobs:
   # without schema.prisma/db changes
   without-db-changes:
     needs: changed-files
-    if: github.event.pull_request.merged == false && !needs.changed-files.outputs.prisma
+    if: github.event.pull_request.merged == false && !needs.changed-files.outputs.PRISMA_CHANGE
     environment: preview # Github Environment
     env:
       PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
@@ -127,8 +141,8 @@ jobs:
     steps:
       - name: Check Env Values
         run: |
-          echo "with db changes? ${{ needs.changed-files.outputs.prisma }}"
-          echo "all changes: ${{ needs.changed-files.outputs.all }}"
+          echo "with db changes? ${{ needs.changed-files.outputs.PRISMA_CHANGE }}"
+          echo "all changes: ${{ needs.changed-files.outputs.ALL_CHANGES }}"
           echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
           echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
