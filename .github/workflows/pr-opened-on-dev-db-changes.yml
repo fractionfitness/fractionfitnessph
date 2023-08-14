@@ -34,9 +34,11 @@ env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
+  ORG_NAME: ${{ vars.ORG_NAME }}
+
   # cannot be accessed here since environment specific
-  # PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-  # PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+  # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+  # PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
   # PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
 
   # VERCEL_ENV: preview
@@ -88,8 +90,8 @@ jobs:
     if: github.event.pull_request.merged == false
     environment: preview # Github Environment
     env:
-      PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
     runs-on: ubuntu-latest
     steps:
@@ -102,8 +104,8 @@ jobs:
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
           echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
           echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
-          echo "PSCALE_TOKEN_ID ${PSCALE_TOKEN_ID}"
-          echo "PSCALE_TOKEN ${PSCALE_TOKEN}"
+          echo "PLANETSCALE_SERVICE_TOKEN_ID ${PLANETSCALE_SERVICE_TOKEN_ID}"
+          echo "PLANETSCALE_SERVICE_TOKEN ${PLANETSCALE_SERVICE_TOKEN}"
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref): ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref): ${{ github.event.pull_request.base.ref }}"
@@ -111,9 +113,18 @@ jobs:
           echo "Target Branch (base.sha): ${{ github.event.pull_request.base.sha }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
-      - name: Install Planetscale CLI
-        run: |
-          echo "installing planetscale cli"
+      # - name: Planetscale Setup
+      #   uses: planetscale/setup-pscale-action@v1
+      - name: Planetscale Create Branch
+        if: needs.changed-files.outputs.PRISMA_CHANGE
+        uses: planetscale/create-branch-action@v4
+        id: create_branch
+        with:
+          org_name: ${{ env.ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
+          from: ${{ env.PSCALE_SRC_BRANCH }}
+          wait: true
       - name: With DB Changes
         if: needs.changed-files.outputs.PRISMA_CHANGE
         run: |
@@ -134,8 +145,8 @@ jobs:
     if: github.event.pull_request.merged == false && !needs.changed-files.outputs.PRISMA_CHANGE
     environment: preview # Github Environment
     env:
-      PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
     runs-on: ubuntu-latest
     steps:
@@ -148,8 +159,8 @@ jobs:
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
           echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
           echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
-          echo "PSCALE_TOKEN_ID ${PSCALE_TOKEN_ID}"
-          echo "PSCALE_TOKEN ${PSCALE_TOKEN}"
+          echo "PLANETSCALE_SERVICE_TOKEN_ID ${PLANETSCALE_SERVICE_TOKEN_ID}"
+          echo "PLANETSCALE_SERVICE_TOKEN ${PLANETSCALE_SERVICE_TOKEN}"
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref): ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref): ${{ github.event.pull_request.base.ref }}"
@@ -169,8 +180,8 @@ jobs:
     if: github.event.pull_request.merged == true
     environment: preview
     env:
-      PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      PSCALE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
     runs-on: ubuntu-latest
     steps:
@@ -181,8 +192,8 @@ jobs:
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
           echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
           echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
-          echo "PSCALE_TOKEN_ID ${PSCALE_TOKEN_ID}"
-          echo "PSCALE_TOKEN ${PSCALE_TOKEN}"
+          echo "PLANETSCALE_SERVICE_TOKEN_ID ${PLANETSCALE_SERVICE_TOKEN_ID}"
+          echo "PLANETSCALE_SERVICE_TOKEN ${PLANETSCALE_SERVICE_TOKEN}"
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref) pull_request: ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref) pull_request: ${{ github.event.pull_request.base.ref }}"
