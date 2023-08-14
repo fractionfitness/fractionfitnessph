@@ -42,9 +42,31 @@ env:
   # VERCEL_ENV: preview
 
 jobs:
+  changed-files:
+    runs-on: ubuntu-latest
+    outputs:
+      all: ${{ steps.changes.outputs.all }}
+      prisma: ${{ steps.changes.outputs.prisma }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      # compares latest commit sha of branch that triggered workflow (github.sha) and target of pull_request (base.sha)
+      # github.sha depends on the event that triggered workflow
+      # reference: https://dev.to/scienta/get-changed-files-in-github-actions-1p36
+      - name: Get changed files
+        id: changes
+        run: |
+          echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
+          echo "::set-output name=prisma::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
+        # no diff since github.sha is the same as head.sha
+        # echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
+        # echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
   # on opened pr targeting dev
   pscale-create-pr-branch-deploy-request:
-    if: github.event.pull_request.merged == false
+    needs: changed-files
+    if: github.event.pull_request.merged == false && ${{ needs.changed-files.outputs.prisma }}
     environment: preview # Github Environment
     env:
       PSCALE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
@@ -54,6 +76,7 @@ jobs:
     steps:
       - name: Check Env Values
         run: |
+          echo "with db changes? ${{ needs.changed-files.outputs.prisma }}"
           echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
           echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
@@ -64,12 +87,16 @@ jobs:
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref): ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref): ${{ github.event.pull_request.base.ref }}"
+          echo "Current Branch (head.sha): ${{ github.event.pull_request.head.sha }}"
+          echo "Target Branch (base.sha): ${{ github.event.pull_request.base.sha }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
       - name: Install Planetscale CLI
         run: |
           echo "installing planetscale cli"
-  # vercel env add DATABASE_URL for the branch
+  # vercel env add DATABASE_URL for the branch (ffph_dev main if no changes | ffph_dev pr-refnum iw w/changes)
+  # vercel deploy
+
   # on approved pr and merged branch into dev
   # approve deploy request
   # delete pr branch
@@ -94,8 +121,6 @@ jobs:
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
           echo "Current Branch (head.ref) pull_request: ${{ github.event.pull_request.head.ref }}"
           echo "Target Branch (base.ref) pull_request: ${{ github.event.pull_request.base.ref }}"
-          echo "Current Branch (head.ref) pull_request_target: ${{ github.event.pull_request_target.head.ref }}"
-          echo "Target Branch (base.ref) pull_request_target: ${{ github.event.pull_request_target.base.ref }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
       - name: Approve Pscale Deploy Request
