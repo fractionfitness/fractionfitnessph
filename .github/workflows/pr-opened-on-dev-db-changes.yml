@@ -93,6 +93,8 @@ jobs:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+    outputs:
+      DEPLOY_REQUEST_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
     runs-on: ubuntu-latest
     steps:
       - name: Check Env Values
@@ -123,6 +125,10 @@ jobs:
           branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
           from: ${{ env.PSCALE_SRC_BRANCH }}
           wait: true
+      - name: Get create branch output
+        run: |
+          echo "Branch create outputs: ${{ steps.create_branch.outputs }}"
+          echo "Branch create output number: ${{ steps.create_branch.outputs.number }}"
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
       - name: Planetscale Branch Password Create & Prisma Connection String
@@ -130,6 +136,16 @@ jobs:
           pscale version
           pscale password create ${PSCALE_DB_NAME} "pr-${GITHUB_PR_REFNUM}" "ffph-dev-pr-${GITHUB_PR_REFNUM}-admin" --role admin --org ${PSCALE_ORG_NAME} -f json --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID >pscale-branch-pword.txt 2>pscale-branch-pword-error.txt
           cat pscale-branch-pword.txt
+      - name: Create a deploy request
+        id: create_deploy_request
+        uses: planetscale/create-deploy-request-action@v2
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
+      - name: Get the deploy request number
+        run: |
+          echo "Deploy request number: ${{ steps.create_deploy_request.outputs.number }}"
 
       # get pscale connection string of newly created branch on ffph_dev
       # prisma db push
