@@ -33,8 +33,6 @@ env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
-  PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
 
   # cannot be accessed here since environment specific
   # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
@@ -92,10 +90,15 @@ jobs:
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
+      PSCALE_NEW_BRANCH: 'pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}'
+      VERCEL_ENV: ${{ vars.VERCEL_ENV }}
     outputs:
       DEPLOY_REQUEST_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
       PRISMA_DATABASE_URL: ${{ steps.get_branch_password.outputs.PSCALE_CONN_STRING }}
+      GITHUB_HEAD_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
     runs-on: ubuntu-latest
     steps:
       - name: Check Env Values
@@ -107,6 +110,9 @@ jobs:
           echo "VERCEL_ORG_ID ${VERCEL_ORG_ID}"
           echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
           echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
+          echo "PSCALE_NEW_BRANCH ${PSCALE_NEW_BRANCH}"
+          echo "PSCALE_ORG_NAME ${PSCALE_ORG_NAME}"
+          echo "VERCEL_ENV ${VERCEL_ENV}"
           echo "PLANETSCALE_SERVICE_TOKEN_ID ${PLANETSCALE_SERVICE_TOKEN_ID}"
           echo "PLANETSCALE_SERVICE_TOKEN ${PLANETSCALE_SERVICE_TOKEN}"
           echo "PSCALE_DB_NAME ${PSCALE_DB_NAME}"
@@ -116,6 +122,23 @@ jobs:
           echo "Target Branch (base.sha): ${{ github.event.pull_request.base.sha }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
+          echo "GITHUB_REF: ${GITHUB_REF} & GITHUB_HEAD_REF: ${GITHUB_HEAD_REF}"
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Check if Planetscale branch already exists
+        run: |
+          pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID}
+          pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID} | grep ${PSCALE_NEW_BRANCH} >> db-branch-list.txt
+          code=$?
+          if [ $code -eq 0 ] ; then
+            cat db-branch-list.txt
+            pscale_branch=`cat db-branch-list.txt`
+            echo ${pscale_branch}
+            exit 0
+          else
+            echo "There was an error"
+            exit 0
+          fi
       - name: Planetscale Create Branch
         if: needs.changed-files.outputs.PRISMA_CHANGE
         id: create_branch
@@ -123,29 +146,29 @@ jobs:
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
-          branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
+          branch_name: ${{ env.PSCALE_NEW_BRANCH }}
           from: ${{ env.PSCALE_SRC_BRANCH }}
           wait: true
       - name: Get create branch output
         run: |
           echo "Branch create outputs: ${{ steps.create_branch.outputs }}"
         # per docs: no output variables
-      # - name: Planetscale Setup
-      #   uses: planetscale/setup-pscale-action@v1
       # - name: Planetscale Branch Password Create & Prisma Connection String
       #   run: |
       #     pscale version
       #     pscale password create ${PSCALE_DB_NAME} "pr-${GITHUB_PR_REFNUM}" "ffph-dev-pr-${GITHUB_PR_REFNUM}-admin" --role admin --org ${PSCALE_ORG_NAME} -f json --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID} >pscale-branch-pword.txt 2>pscale-branch-pword-error.txt
       #     cat pscale-branch-pword.txt
       - name: Create branch password
+        env:
+          PWORD_ROLE: 'admin'
         uses: planetscale/create-branch-password-action@v3
         id: create_password
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
-          branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
-          role: admin
-          name: ffph-dev-pr-${{ env.GITHUB_PR_REFNUM }}-admin
+          branch_name: ${{ env.PSCALE_NEW_BRANCH }}
+          role: ${PWORD_ROLE}
+          name: 'ffph-dev-pr-${{ env.GITHUB_PR_REFNUM }}-${PWORD_ROLE}'
       - name: Get branch credentials
         id: get_branch_password
         run: |
@@ -154,20 +177,52 @@ jobs:
           echo "Password: ${{ steps.create_password.outputs.password }}"
           echo "PSCALE_CONN_STRING=mysql://${{ steps.create_password.outputs.username }}:${{ steps.create_password.outputs.password }}@${{ steps.create_password.outputs.hostname }}/${PSCALE_DB_NAME}?sslaccept=strict"
           echo "PSCALE_CONN_STRING=mysql://${{ steps.create_password.outputs.username }}:${{ steps.create_password.outputs.password }}@${{ steps.create_password.outputs.hostname }}/${PSCALE_DB_NAME}?sslaccept=strict" >> "${GITHUB_OUTPUT}"
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel Environment Information
+        run: vercel env pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Check Values after vercel env pull
+        run: |
+          echo "${DATABASE_URL}"
+          echo "${NEXTAUTH_URL}"
+          echo "${NEXTAUTH_SECRET}"
+          echo "${VERCEL_URL}"
+          echo "${VERCEL_ENV}"
+          echo "https://{VERCEL_URL}"
+          echo "https://${VERCEL_URL}"
+      # Better to build in Vercel so that it has access to System Environment Variables and no need to define NEXTAUTH_URL
+      # reference: https://next-auth.js.org/configuration/options
+      - name: Extract branch name
+        id: extract_branch
+        # shell: bash
+        run: |
+          echo "check GITHUB_HEAD_BRANCH: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "GITHUB_HEAD_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        # https://stackoverflow.com/questions/58033366/how-to-get-the-current-branch-within-github-actions
+      - name: Display branch name
+        run: |
+          echo "using GITHUB_HEAD_REF and GITHUB_REF: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}"
+          echo "using pull_request event object: ${{ github.event.pull_request.head.sha }}"
+      - name: Add Env Vars to Preview Deployment on branch w/ opened PR
+        run: |
+          echo ${PRISMA_DATABASE_URL} >> db-url.txt
+          cat db-url.txt
+          vercel env add DATABASE_URL ${VERCEL_ENV} ${{ steps.extract_branch.outputs.branch }} < db-url.txt --token=${{ secrets.VERCEL_TOKEN }}
+
+      # get pscale connection string of newly created branch on ffph_dev
+      # prisma db push before creating deploy request (pscale still works even though deploy request created first before "db push" changes)
+      # create deploy request
+
       - name: Create a deploy request
         id: create_deploy_request
         uses: planetscale/create-deploy-request-action@v2
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
-          branch_name: pr-${{ env.GITHUB_PR_REFNUM }}
+          branch_name: ${{ env.PSCALE_NEW_BRANCH }}
       - name: Get the deploy request number
         run: |
           echo "Deploy request number: ${{ steps.create_deploy_request.outputs.number }}"
-
-      # get pscale connection string of newly created branch on ffph_dev
-      # prisma db push
-      # create deploy request
 
       - name: With DB Changes
         if: needs.changed-files.outputs.PRISMA_CHANGE
