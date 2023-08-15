@@ -29,12 +29,14 @@ on:
 # insert environment variable
 
 env:
-  GITHUB_PR_REFNUM: ${{ github.event.pull_request.number }}
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-  # cannot be accessed here since environment specific
+  # not used in all jobs
+  # GITHUB_PR_REFNUM: ${{ github.event.pull_request.number }}
+
+  # cannot be accessed here since github environment specific
   # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
   # PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
   # PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
@@ -94,6 +96,7 @@ jobs:
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
       PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
       PSCALE_NEW_BRANCH: 'pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}'
+      GITHUB_PR_REFNUM: ${{ github.event.pull_request.number }}
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
     outputs:
       DEPLOY_REQUEST_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
@@ -190,10 +193,10 @@ jobs:
           branch_name: ${{ env.PSCALE_NEW_BRANCH }}
           from: ${{ env.PSCALE_SRC_BRANCH }}
           wait: true
-      - name: Get create branch output
-        run: |
-          echo "Branch create outputs: ${{ steps.create_branch.outputs }}"
-        # per docs: no output variables
+      # - name: Get create branch output
+      #   run: |
+      #     echo "Branch create outputs: ${{ steps.create_branch.outputs }}"
+      # per docs: no output variables
       # - name: Planetscale Branch Password Create & Prisma Connection String
       #   run: |
       #     pscale version
