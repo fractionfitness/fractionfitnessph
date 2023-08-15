@@ -99,6 +99,7 @@ jobs:
       DEPLOY_REQUEST_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
       PRISMA_DATABASE_URL: ${{ steps.get_branch_password.outputs.PSCALE_CONN_STRING }}
       GITHUB_HEAD_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
+      # PSCALE_BRANCH_EXISTS: ${{ steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS }}
     runs-on: ubuntu-latest
     steps:
       - name: Check Env Values
@@ -111,7 +112,7 @@ jobs:
           echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
           echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
           echo "PSCALE_NEW_BRANCH ${PSCALE_NEW_BRANCH}"
-          echo "PSCALE_ORG_NAME ${PSCALE_ORG_NAME}"
+          echo "PSCALE_ORG_NAME ${PSCALE_ORG_NAME}"then
           echo "VERCEL_ENV ${VERCEL_ENV}"
           echo "PLANETSCALE_SERVICE_TOKEN_ID ${PLANETSCALE_SERVICE_TOKEN_ID}"
           echo "PLANETSCALE_SERVICE_TOKEN ${PLANETSCALE_SERVICE_TOKEN}"
@@ -125,20 +126,60 @@ jobs:
           echo "GITHUB_REF: ${GITHUB_REF} & GITHUB_HEAD_REF: ${GITHUB_HEAD_REF}"
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
-      - name: Check if Planetscale branch already exists
+      - name: Check if Planetscale branch exists
+        id: check_pscale_branch
         run: |
+          echo "listing all branches on ORG:${PSCALE_ORG_NAME} DB:${PSCALE_DB_NAME}"
+
           pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID}
-          pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID} | grep ${PSCALE_NEW_BRANCH} >> db-branch-list.txt
-          code=$?
-          if [ $code -eq 0 ] ; then
-            cat db-branch-list.txt
-            pscale_branch=`cat db-branch-list.txt`
-            echo ${pscale_branch}
-            exit 0
+
+          echo "Does BRANCH:${PSCALE_NEW_BRANCH} exist in DB:${PSCALE_DB_NAME}?"
+
+          branchExists="pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID} | grep ${PSCALE_NEW_BRANCH}"
+
+          if eval $branchExists ; then
+            echo "Pscale BRANCH:${PSCALE_NEW_BRANCH} exists..."
+            echo "PSCALE_BRANCH_EXISTS=true" >> "${GITHUB_OUTPUT}"
           else
-            echo "There was an error"
-            exit 0
+            echo "Pscale BRANCH:${PSCALE_NEW_BRANCH} does not exist..."
+            echo "PSCALE_BRANCH_EXISTS=false" >> "${GITHUB_OUTPUT}"
           fi
+        # eval "${branchExists} >> db-branch-list.txt"
+        # cat db-branch-list.txt
+      - name: Create Pscale Branch (if does not exist yet)
+        if: steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS == 'false'
+        run: |
+          echo "Pscale Branch doesn't exist yet"
+          echo "PSCALE_BRANCH_EXISTS: ${{ steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS }}"
+          echo "1 ${{ steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS }}"
+          echo "2 ${{ !steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS }}"
+      - name: Don't Create Pscale Branch (already exists)
+        if: steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS == 'true'
+        run: |
+          echo "Pscale Branch already exists"
+          echo "PSCALE_BRANCH_EXISTS: ${{ steps.check_pscale_branch.outputs.PSCALE_BRANCH_EXISTS }}"
+      # - name: Read db-branch-list.txt
+      #   run: |
+      #     code=$?
+      #     if [ $code -eq 0 ] ; then
+      #       cat db-branch-list.txt
+      #       pscale_branch=`cat db-branch-list.txt`
+      #       echo ${pscale_branch}
+      #       exit 0
+      #     else
+      #       echo "There was an error"
+      #       exit 1
+      #     fi
+      # check if failure() then create branch if not failure() dont create branch
+      # if an error occurs, workflow stops running | even with if: always(), workflow still wont work? no way to execute the succeeding steps?  if need to separate it into another job but may not be a problem since can use if:() in steps...
+      - name: If success
+        if: ${{ success() }}
+        run: |
+          echo "steps.check_pscale_branch succeeded"
+      - name: If failure
+        if: ${{ failure() }}
+        run: |
+          echo "steps.check_pscale_branch failed"
       - name: Planetscale Create Branch
         if: needs.changed-files.outputs.PRISMA_CHANGE
         id: create_branch
