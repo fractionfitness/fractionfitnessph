@@ -124,9 +124,13 @@ jobs:
     outputs:
       # PSCALE_DR_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
       # GITHUB_HEAD_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
-      PSCALE_CONN_STRING: ${{ steps.get_password.outputs.PSCALE_CONN_STRING }}
+
+      # secrets not allowed to be set in outputs | github actions will mask them or replace them as empty strings
+      # PSCALE_CONN_STRING: ${{ steps.get_password.outputs.PSCALE_CONN_STRING }}
+
       PSCALE_BRANCH_EXISTS: ${{ steps.check_branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
       PSCALE_BRANCH_PWORD_EXISTS: ${{ steps.check_pword_exists.outputs.PSCALE_BRANCH_PWORD_EXISTS }}
+      PSCALE_BRANCH_PWORD_CREATED: ${{ steps.get_password.outputs.PSCALE_BRANCH_PWORD_CREATED }}
       PRISMA_CHANGE: ${{ needs.changed-files.outputs.PRISMA_CHANGE }}
 
       # how to set if either has a value
@@ -276,7 +280,7 @@ jobs:
         # ./shell-scripts/pscale/check-pword-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}"
         # chmod is needed anytime in a Dockerfile or downloading an artifact that needs to be executed
 
-      - name: Create branch password
+      - name: Create Planetscale branch password
         # branch pword doesn't exist yet
         if: steps.check_pword_exists.outputs.PSCALE_BRANCH_PWORD_EXISTS == 'false'
         # env:
@@ -291,14 +295,33 @@ jobs:
           name: ${{ env.PSCALE_NEW_BRANCH_PWORD }}
           # name: 'ffph-dev-pr-${{ env.GITHUB_PR_REFNUM }}-${PWORD_ROLE}'
 
-      - name: Get branch credentials
+      - name: Get Planetscale branch credentials
         id: get_password
+        # only run if pscale branch password was created in previous step | password has a value or is not an empty string
+        if: steps.create_password.outputs.password
+        # cannot use secrets directly in run cmds since gh actions masks anything that looks like a secret with **** | just set them to step-level/job-level env variables first
+        env:
+          HOSTNAME: ${{ steps.create_password.outputs.hostname }}
+          USERNAME: ${{ steps.create_password.outputs.username }}
+          PASSWORD: ${{ steps.create_password.outputs.password }}
+        shell: bash
         run: |
-          echo "Hostname: ${{ steps.create_password.outputs.hostname }}" \
-          echo "Username: ${{ steps.create_password.outputs.username }}" \
-          echo "Password: ${{ steps.create_password.outputs.password }}"
-          echo "PSCALE_CONN_STRING=mysql://${{ steps.create_password.outputs.username }}:${{ steps.create_password.outputs.password }}@${{ steps.create_password.outputs.hostname }}/${PSCALE_DB_NAME}?sslaccept=strict"
-          echo "PSCALE_CONN_STRING=mysql://${{ steps.create_password.outputs.username }}:${{ steps.create_password.outputs.password }}@${{ steps.create_password.outputs.hostname }}/${PSCALE_DB_NAME}?sslaccept=strict" >> "${GITHUB_OUTPUT}"
+          echo "mysql://${USERNAME}:${PASSWORD}@${HOSTNAME}/${PSCALE_DB_NAME}?sslaccept=strict" | tee -a "pscale-conn-string.txt"
+          echo "PSCALE_BRANCH_PWORD_CREATED=true" >> "${GITHUB_OUTPUT}"
+
+      # "tee -a" appends value to multiple files
+      # cannot set secret as output as github actions will mask it with ****
+      # echo "${PSCALE_CONN_STRING}" | tee -a "${GITHUB_OUTPUT}" "pscale-conn-string.txt"
+
+      # should not upload if no branch credentials
+      - name: Upload Planetscale Connection String
+        # if pscale branch password was created | don't use steps.check_pword_exists.outputs.PSCALE_BRANCH_PWORD_EXISTS since cannot get the conn string there
+        # better to check so that this skip may be skipped | step still succeeds if file is non-existent it just won't upload anything
+        if: steps.create_password.outputs.password
+        uses: actions/upload-artifact@v3
+        with:
+          name: pscale-conn-string
+          path: pscale-conn-string.txt
 
       - name: Check if Planetscale branch deploy request exists
         id: check_dr_exists
@@ -345,10 +368,13 @@ jobs:
     if: github.event.pull_request.merged == false && needs.pscale-create-branch-deploy-request.outputs.PRISMA_CHANGE
     environment: preview # Github Environment
     env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
       PSCALE_DR_NUM: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_DR_NUM }}
-      PRISMA_DATABASE_URL: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_CONN_STRING }}
       PSCALE_BRANCH_EXISTS: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_BRANCH_EXISTS }}
+
+      # no longer using outputs for connection string since it is a secret
+      # PRISMA_DATABASE_URL: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_CONN_STRING }}
     outputs:
       GITHUB_HEAD_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
       GITHUB_BASE_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_BASE_BRANCH }}
@@ -388,15 +414,37 @@ jobs:
       - name: Display branches
         run: |
           echo "using GITHUB_HEAD_REF and GITHUB_REF: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}"
-          echo "using pull_request event: GITHUB_HEAD_REF: ${{ github.event.pull_request.head.sha }}"
+          echo "using pull_request event: GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}"
           echo "using GITHUB_BASE_REF: ${{ steps.extract_branch.outputs.GITHUB_BASE_BRANCH }}"
-          echo "using pull_request event: GITHUB_BASE_REF: ${{ github.event.pull_request.base.sha }}"
+          echo "using pull_request event: GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}"
+          echo "check '\${GITHUB_HEAD_REF:-\${GITHUB_REF#refs/heads/}}' "
+          echo "GITHUB_HEAD_BRANCH: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "GITHUB_REF: ${GITHUB_REF} | GITHUB_HEAD_REF: ${GITHUB_HEAD_REF} | GITHUB_BASE_REF: ${GITHUB_BASE_REF}"
 
+      # only execute if artifact exists | how to check if artifact exists?
+      - name: Download Planetscale connection string
+        # temporary solution
+        if: needs.pscale-create-branch-deploy-request.outputs.PSCALE_BRANCH_PWORD_CREATED == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: pscale-conn-string
+          path: ./
+
+      # only execute if file exists | how to check??? maybe use ls
       - name: Add Env Vars to Preview Deployment on branch w/ opened PR
+        if: needs.pscale-create-branch-deploy-request.outputs.PSCALE_BRANCH_PWORD_CREATED == 'true'
         run: |
-          echo ${PRISMA_DATABASE_URL} >> db-url.txt
-          cat db-url.txt
-          vercel env add DATABASE_URL ${VERCEL_ENV} ${{ steps.extract_branch.outputs.branch }} < db-url.txt --token=${{ secrets.VERCEL_TOKEN }}
+          vercel env add --token="${VERCEL_TOKEN}" DATABASE_URL "${VERCEL_ENV}" ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }} < "pscale-conn-string.txt"
+
+        # alternative to above command
+        # cat "pscale-conn-string.txt" | vercel env add --token="${VERCEL_TOKEN}" DATABASE_URL "${VERCEL_ENV}" ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
+
+        # alternative to above command
+        # cat "pscale-conn-string.txt" | vercel env add --token=${{ env.VERCEL_TOKEN }} DATABASE_URL "${VERCEL_ENV}" ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
+
+        # echo ${PRISMA_DATABASE_URL} >> db-url.txt
+        # cat db-url.txt
+        # vercel env add DATABASE_URL ${VERCEL_ENV} ${{ steps.extract_branch.outputs.GITHUB_BASE_BRANCH }} < db-url.txt --token=${{ secrets.VERCEL_TOKEN }}
 
   # get pscale connection string of newly created branch on ffph_dev
   # prisma db push before creating deploy request (pscale still works even though deploy request created first before "db push" changes)
