@@ -40,11 +40,19 @@ fi
 
 # only works if a pull request has already been opened for the feat branch beforehand and another commit has been pushed after the opened PR
 # ref: https://vercel.com/docs/concepts/deployments/preview-deployments
+
+# turn on deployments to pull requests
 if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "staging" || "$VERCEL_GIT_COMMIT_REF" == "dev" || x"${VERCEL_GIT_PULL_REQUEST_ID}" != "x" ]] ; then
+
+# turn off deployments to pull requests
+# if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "staging" || "$VERCEL_GIT_COMMIT_REF" == "dev" ]] ; then
+
   # Proceed with the build
+  echo "VERCEL_GIT_COMMIT_REF ${VERCEL_GIT_COMMIT_REF}"
+  echo "VERCEL_GIT_COMMIT_SHA ${VERCEL_GIT_COMMIT_SHA}"
+  echo "VERCEL_GIT_PULL_REQUEST_ID ${VERCEL_GIT_PULL_REQUEST_ID}"
   echo "✅ - Build can proceed"
   exit 1;
-
 else
   # Don't build
   echo "🛑 - Build cancelled"
