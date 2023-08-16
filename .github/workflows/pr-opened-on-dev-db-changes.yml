@@ -188,6 +188,7 @@ jobs:
         id: create_branch
         uses: planetscale/create-branch-action@v4
         with:
+          check_exists: true
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
           branch_name: ${{ env.PSCALE_NEW_BRANCH }}
