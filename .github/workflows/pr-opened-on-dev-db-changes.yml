@@ -1,4 +1,4 @@
-name: Pull Request Opened on Dev Branch w/ DB changes
+name: Pull Request on Feat into Dev
 
 on:
   # to manually trigger if I somehow missed an activity type
@@ -17,16 +17,8 @@ on:
         review_requested,
         closed,
       ]
-  # pull_request_target:
-  #   branches: [dev]
-  #   types: [closed]
-  # paths: ['prisma/schema.prisma']
-  # types: [opened, reopened, edited, submitted]
-  # pull_request_review.submitted: run when an approving review is submitted for an opened pr
-  # push:
-  #   branches: [cicd-test]
-
-# insert environment variable
+  # paths: ['prisma/schema.prisma'] # only run when the paths are included in commits
+  # type: pull_request_review.submitted: run when an approving review is submitted for an opened pr
 
 env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
@@ -75,12 +67,39 @@ jobs:
       #   run: |
       #     echo "check env output - prisma: ${PRISMA_CHANGE} - all: ${ALL_CHANGES}"
 
+      # deprecated
       # echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
       # echo "::set-output name=prisma::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
 
       # no diff since github.sha is the same as head.sha
       # echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
       # echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
+
+      - name: Upload Planetscale Scripts Artifact?
+        # if there are DB Schema Changes
+        if: steps.changes.outputs.PRISMA_CHANGE
+        run: |
+          echo "upload pscale scripts as artifact"
+      - name: Upload Planetscale Scripts Artifact
+        # if there are DB Schema Changes
+        if: steps.changes.outputs.PRISMA_CHANGE
+        uses: actions/upload-artifact@v3
+        with:
+          name: pscale-scripts
+          path: ./shell-scripts/pscale/
+
+      - name: Vercel Scripts Artifact?
+        # pull request is not yet merged
+        if: github.event.pull_request.merged == false
+        run: |
+          echo "upload vercel scripts as artifact"
+      - name: Upload Vercel Scripts Artifact
+        # pull request is not yet merged
+        if: github.event.pull_request.merged == false
+        uses: actions/upload-artifact@v3
+        with:
+          name: vercel-scripts
+          path: ./shell-scripts/vercel/
 
   # on opened pr targeting dev
 
@@ -134,13 +153,9 @@ jobs:
       #   id: check_branch_exists
       #   run: |
       #     echo "listing all branches on ORG:${PSCALE_ORG_NAME} DB:${PSCALE_DB_NAME}"
-
       #     pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID}
-
       #     echo "Does BRANCH:${PSCALE_NEW_BRANCH} exist in DB:${PSCALE_DB_NAME}?"
-
       #     branchExists="pscale branch list ${PSCALE_DB_NAME} --org ${PSCALE_ORG_NAME} --service-token ${PLANETSCALE_SERVICE_TOKEN} --service-token-id ${PLANETSCALE_SERVICE_TOKEN_ID} | grep ${PSCALE_NEW_BRANCH}"
-
       #     if eval $branchExists ; then
       #       echo "Pscale BRANCH:${PSCALE_NEW_BRANCH} exists..."
       #       echo "PSCALE_BRANCH_EXISTS=true" >> "${GITHUB_OUTPUT}"
@@ -151,17 +166,29 @@ jobs:
       # eval "${branchExists} >> matching-db-branch.txt"
       # cat matching-db-branch.txt
       # V2 based on planetscale/create-branch-action@v4 script to check pscale branch
-      - name: Checkout repository
-        uses: actions/checkout@v3
+
+      # - name: Checkout repository
+      #   uses: actions/checkout@v3
+
+      # use uploaded artifact instead of checking out repo
+      - name: Download pscale-scripts artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pscale-scripts
+          path: ./shell-scripts/pscale/
+
       - name: Check if Planetscale branch exists
         id: check_branch_exists
         run: |
+          chmod -R +x ./shell-scripts/pscale/
+
           ./shell-scripts/pscale/check-branch-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}" "${PLANETSCALE_SERVICE_TOKEN_ID}" "${PLANETSCALE_SERVICE_TOKEN}"
           echo "step outputs: PSCALE_BRANCH_EXISTS"
+
         # still works even if pscale service token and id is not passed
         # ./shell-scripts/pscale/check-branch-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}"
-        # chmod, most likely, only needed if inside a Dockerfile but included just in case
-        # chmod +x ./shell-scripts/pscale/check-branch-exists.sh
+        # chmod is needed anytime in a Dockerfile or downloading an artifact that needs to be executed
+
       - name: Create Pscale Branch (if does not exist yet)
         if: steps.check_branch_exists.outputs.PSCALE_BRANCH_EXISTS == 'false'
         run: |
@@ -407,7 +434,7 @@ jobs:
   #     - name: Deploy Project to Vercel
   #       run: |
   #         vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
-  #         bash ./shell-scripts/vercel-check-deploy.sh
+  #         bash ./shell-scripts/vercel/check-deploy.sh
   #       # vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
   #       # echo "env.VERCEL_ENV ${{ env.VERCEL_ENV }}"
   #       # NEXTAUTH will produce error after deployment if using "vercel deploy --prebuilt", since VERCEL_URL (deployment url) not yet known during build step (previous step)
@@ -461,4 +488,4 @@ jobs:
   #     - name: Deploy Project to Vercel
   #       run: |
   #         vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
-  #         bash ./shell-scripts/vercel-check-deploy.sh
+  #         bash ./shell-scripts/vercel/check-deploy.sh

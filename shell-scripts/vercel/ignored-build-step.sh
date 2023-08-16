@@ -42,7 +42,7 @@ fi
 # ref: https://vercel.com/docs/concepts/deployments/preview-deployments
 if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "staging" || "$VERCEL_GIT_COMMIT_REF" == "dev" || x"${VERCEL_GIT_PULL_REQUEST_ID}" != "x" ]] ; then
   # Proceed with the build
-    echo "✅ - Build can proceed"
+  echo "✅ - Build can proceed"
   exit 1;
 
 else
