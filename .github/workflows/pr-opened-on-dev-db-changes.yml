@@ -114,18 +114,30 @@ jobs:
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
       PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
       PSCALE_NEW_BRANCH: 'pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}'
-      PSCALE_NEW_BRANCH_PWORD: 'ffph-dev-pr-${{ github.event.pull_request.number }}-${PWORD_ROLE}'
+
+      # will not interpolate the env var during "echo command" but not an issue as long as PSCALE_NEW_BRANCH_PWORD is used inside of ${{}} or "${}" (double quotes are required)
+      # Display name for PSCALE_NEW_BRANCH_PWORD can only contain lowercase alphanumeric characters and dashes, and cannot start or end with a dash."
+      PSCALE_NEW_BRANCH_PWORD: 'pr-${{ github.event.pull_request.number }}-${PWORD_ROLE}'
       GITHUB_PR_REFNUM: ${{ github.event.pull_request.number }}
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
+
     outputs:
-      DEPLOY_REQUEST_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
-      PRISMA_DATABASE_URL: ${{ steps.get_password.outputs.PSCALE_CONN_STRING }}
+      # PSCALE_DR_NUM: ${{ steps.create_deploy_request.outputs.NUMBER }}
       # GITHUB_HEAD_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
       PSCALE_CONN_STRING: ${{ steps.get_password.outputs.PSCALE_CONN_STRING }}
       PSCALE_BRANCH_EXISTS: ${{ steps.check_branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
       PSCALE_BRANCH_PWORD_EXISTS: ${{ steps.check_pword_exists.outputs.PSCALE_BRANCH_PWORD_EXISTS }}
       PRISMA_CHANGE: ${{ needs.changed-files.outputs.PRISMA_CHANGE }}
+
+      # how to set if either has a value
+      # these values may not be needed since no succeeding job (connected to this job) needs this
+      # only steps in this job need these values
+      PSCALE_DR_NUM: ${{ steps.create_deploy_request.outputs.NUMBER || steps.check_dr_exists.outputs.PSCALE_DR_NUM }}
+      PSCALE_DR_STATE: ${{ steps.check_dr_exists.outputs.PSCALE_DR_STATE }}
+      PSCALE_DR_DEPLOY_STATE: ${{ steps.check_dr_exists.outputs.PSCALE_DR_DEPLOY_STATE }}
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Check Env Values
         run: |
@@ -137,7 +149,7 @@ jobs:
           echo "VERCEL_PROJECT_ID ${VERCEL_PROJECT_ID}"
           echo "PSCALE_SRC_BRANCH ${PSCALE_SRC_BRANCH}"
           echo "PSCALE_NEW_BRANCH ${PSCALE_NEW_BRANCH}"
-          echo "PSCALE_NEW_BRANCH_PWORD_NAME: ${PSCALE_NEW_BRANCH_PWORD_NAME}"
+          echo "PSCALE_NEW_BRANCH_PWORD: ${PSCALE_NEW_BRANCH_PWORD}"
           echo "PSCALE_ORG_NAME ${PSCALE_ORG_NAME}"
           echo "VERCEL_ENV ${VERCEL_ENV}"
           echo "PLANETSCALE_SERVICE_TOKEN_ID ${PLANETSCALE_SERVICE_TOKEN_ID}"
@@ -149,7 +161,7 @@ jobs:
           echo "Target Branch (base.sha): ${{ github.event.pull_request.base.sha }}"
           echo "PR merged? ${{ github.event.pull_request.merged }}"
           echo "PR state? ${{ github.event.pull_request.state }}"
-          echo "GITHUB_REF: ${GITHUB_REF} & GITHUB_HEAD_REF: ${GITHUB_HEAD_REF}"
+          echo "GITHUB_REF: ${GITHUB_REF} | GITHUB_HEAD_REF: ${GITHUB_HEAD_REF} | GITHUB_BASE_REF: ${GITHUB_BASE_REF}"
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
 
@@ -255,7 +267,7 @@ jobs:
         run: |
           chmod -R +x ./shell-scripts/pscale/check-pword-exists.sh
 
-          ./shell-scripts/pscale/check-pword-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}" "${PSCALE_NEW_BRANCH_PWORD}"
+          ./shell-scripts/pscale/check-pword-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}" ${PSCALE_NEW_BRANCH_PWORD}
 
           echo "step outputs: PSCALE_BRANCH_PWORD_EXISTS"
 
@@ -288,7 +300,17 @@ jobs:
           echo "PSCALE_CONN_STRING=mysql://${{ steps.create_password.outputs.username }}:${{ steps.create_password.outputs.password }}@${{ steps.create_password.outputs.hostname }}/${PSCALE_DB_NAME}?sslaccept=strict"
           echo "PSCALE_CONN_STRING=mysql://${{ steps.create_password.outputs.username }}:${{ steps.create_password.outputs.password }}@${{ steps.create_password.outputs.hostname }}/${PSCALE_DB_NAME}?sslaccept=strict" >> "${GITHUB_OUTPUT}"
 
-      - name: Create a deploy request
+      - name: Check if Planetscale branch deploy request exists
+        id: check_dr_exists
+        run: |
+          chmod -R +x ./shell-scripts/pscale/check-dr-exists.sh
+
+          ./shell-scripts/pscale/check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}"
+          echo "step outputs: PSCALE_BRANCH_PWORD_EXISTS"
+
+      - name: Create branch deploy request
+        # create if, deploy request for specified branch is non-existent OR deploy request exists but is "closed"
+        if: steps.check_dr_exists.outputs.PSCALE_DR_EXISTS == 'false' || steps.check_dr_exists.outputs.PSCALE_DR_STATE == 'closed'
         id: create_deploy_request
         uses: planetscale/create-deploy-request-action@v2
         with:
@@ -296,9 +318,13 @@ jobs:
           database_name: ${{ env.PSCALE_DB_NAME }}
           branch_name: ${{ env.PSCALE_NEW_BRANCH }}
 
-      - name: Get the deploy request number
+      - name: Get branch deploy request info
         run: |
           echo "Deploy request number: ${{ steps.create_deploy_request.outputs.number }}"
+          echo "using steps.check_dr_exists outputs PSCALE_DR_NUM: ${{ steps.check_dr_exists.outputs.PSCALE_DR_NUM }}"
+          echo "using steps.check_dr_exists outputs PSCALE_DR_STATE: ${{ steps.check_dr_exists.outputs.PSCALE_DR_STATE }}"
+          echo "using steps.check_dr_exists outputs PSCALE_DR_DEPLOY_STATE: ${{ steps.check_dr_exists.outputs.PSCALE_DR_DEPLOY_STATE }}"
+          echo "create_deploy_request || check_dr_exists DR number: ${{ steps.create_deploy_request.outputs.number || steps.check_dr_exists.outputs.PSCALE_DR_NUM}}"
 
       - name: With DB Changes
         if: needs.changed-files.outputs.PRISMA_CHANGE
@@ -320,9 +346,8 @@ jobs:
     environment: preview # Github Environment
     env:
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
-      DEPLOY_REQUEST_NUM: ${{ needs.pscale-create-branch-deploy-request.outputs.DEPLOY_REQUEST_NUM }}
+      PSCALE_DR_NUM: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_DR_NUM }}
       PRISMA_DATABASE_URL: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_CONN_STRING }}
-      PSCALE_CONN_STRING: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_CONN_STRING }}
       PSCALE_BRANCH_EXISTS: ${{ needs.pscale-create-branch-deploy-request.outputs.PSCALE_BRANCH_EXISTS }}
     outputs:
       GITHUB_HEAD_BRANCH: ${{ steps.extract_branch.outputs.GITHUB_HEAD_BRANCH }}
