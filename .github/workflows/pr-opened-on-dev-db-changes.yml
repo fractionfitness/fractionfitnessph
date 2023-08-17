@@ -17,6 +17,8 @@ on:
         review_requested,
         closed,
       ]
+  # synchronize - push commits to head branch
+  # edited - when base ref on base branch changes for the pr
   # paths: ['prisma/schema.prisma'] # only run when the paths are included in commits
   # type: pull_request_review.submitted: run when an approving review is submitted for an opened pr
 
@@ -37,6 +39,19 @@ env:
   # VERCEL_ENV: preview
 
 jobs:
+  get-scripts:
+    if: github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Upload Planetscale Scripts Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: shell-scripts
+          path: ./shell-scripts/
+
   changed-files:
     # enclosing context values in ${{ }} turns them into strings and strings are truthy
     if: github.event.pull_request.state != 'closed' || github.event.pull_request.merged == true
@@ -76,31 +91,76 @@ jobs:
       # echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
       # echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
 
-      - name: Upload Planetscale Scripts Artifact?
-        # if there are DB Schema Changes
-        if: steps.changes.outputs.PRISMA_CHANGE
-        run: |
-          echo "upload pscale scripts as artifact"
-      - name: Upload Planetscale Scripts Artifact
-        # if there are DB Schema Changes
-        if: steps.changes.outputs.PRISMA_CHANGE
-        uses: actions/upload-artifact@v3
-        with:
-          name: pscale-scripts
-          path: ./shell-scripts/pscale/
+      # - name: Upload Planetscale Scripts Artifact
+      #   # if there are DB Schema Changes
+      #   if: steps.changes.outputs.PRISMA_CHANGE
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: pscale-scripts
+      #     path: ./shell-scripts/pscale/
 
-      - name: Vercel Scripts Artifact?
-        # pull request is not yet merged
-        if: github.event.pull_request.merged == false
-        run: |
-          echo "upload vercel scripts as artifact"
-      - name: Upload Vercel Scripts Artifact
-        # pull request is not yet merged
-        if: github.event.pull_request.merged == false
-        uses: actions/upload-artifact@v3
+      # - name: Upload Vercel Scripts Artifact
+      #   # pull request is not yet merged
+      #   if: github.event.pull_request.merged == false
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: vercel-scripts
+      #     path: ./shell-scripts/vercel/
+
+  # unmerged-closed-pr ||
+  pscale-delete-branch:
+    needs: changed-files
+    # when PR is closed, branch should be deleted whether pr was merged or not
+    # if PR is merged, deploy req should be checked if 'complete'
+    if: github.event.pull_request.state == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download shell-scripts artifact
+        uses: actions/download-artifact@v3
         with:
-          name: vercel-scripts
-          path: ./shell-scripts/vercel/
+          name: shell-scripts
+          path: ./shell-scripts/
+
+      - name: Check if Planetscale branch exists
+        id: branch_exists
+        run: |
+          chmod -R +x ./shell-scripts/pscale/check-branch-exists.sh
+
+          ./shell-scripts/pscale/check-branch-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}" "${PLANETSCALE_SERVICE_TOKEN_ID}" "${PLANETSCALE_SERVICE_TOKEN}"
+          echo "step outputs: PSCALE_BRANCH_EXISTS"
+
+      - name: Check if Deploy Request exists
+        # no need to check deploy req if pr is closed and unmerged since it will automatically be 'closed' (state) when branch is deleted
+        if: github.event.pull_request.merge == true
+        id: dr_exists
+        run: |
+          chmod -R +x ./shell-scripts/pscale/check-dr-exists.sh
+
+          ./shell-scripts/pscale/check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}"
+
+          echo "outputs: PSCALE_DR_EXISTS / PSCALE_DR_NUMBER / PSCALE_DR_STATE / PSCALE_DR_DEPLOY_STATE
+
+        # echo "outputs: / PSCALE_DR_EXISTS: ${PSCALE_DR_EXISTS} / PSCALE_DR_NUMBER: ${PSCALE_DR_NUMBER} / PSCALE_DR_STATE: ${PSCALE_DR_STATE} / PSCALE_DR_DEPLOY_STATE: ${PSCALE_DR_DEPLOY_STATE}"
+
+      - name: Approve Deploy Request
+        if: github.event.pull_request.merge == true && steps.dr_exists.outputs.PSCALE_DR_EXISTS == true && steps.dr_exists.outputs.PSCALE_DR_STATE == 'open' && steps.dr_exists.outputs.PSCALE_DR_DEPLOY_STATE == 'ready'
+        run: |
+          echo "check if deploy req status is 'complete' \
+            if not complete
+
+      # pscale automatically closes DR when branch is closed so no need to close it when pull_request.merge == false | just need to make sure branch is deleted
+
+      - name: Delete Branch
+
+      - name: Approve Deploy Request
+        if: steps.dr_exists.outputs.PSCALE_DR_EXISTS == true
+        run: |
+          echo "asdas"
+
+      #  only delete branch when pr merge is true if:
+      #  dr state=
+      if: steps.dr_exists.outputs.PSCALE_DR_EXISTS == false && github.event.pull_request.merge == true
+      # - name: Delete Pscale Branch
 
   pscale-create-branch-deploy-request:
     needs: changed-files
@@ -216,11 +276,11 @@ jobs:
       #   uses: actions/checkout@v3
 
       # use uploaded artifact instead of checking out repo
-      - name: Download pscale-scripts artifact
+      - name: Download shell-scripts artifact
         uses: actions/download-artifact@v3
         with:
-          name: pscale-scripts
-          path: ./shell-scripts/pscale/
+          name: shell-scripts
+          path: ./shell-scripts/
 
       - name: Check if Planetscale branch exists
         id: check_branch_exists
