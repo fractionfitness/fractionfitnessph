@@ -37,6 +37,6 @@ jobs:
       - name: Deploy deploy request
         uses: planetscale/deploy-deploy-request-action@v3
         with:
-          org_name: ${PSCALE_ORG_NAME}
-          database_name: ${PSCALE_DB_NAME}
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: '${PSCALE_DB_NAME}'
           number: 43
