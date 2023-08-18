@@ -22,6 +22,7 @@ env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
   PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
   PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+  PSCALE_BRANCH_NAME: 'pr-31-cicd-test'
 
 jobs:
   # download scripts
@@ -31,34 +32,33 @@ jobs:
   get-scripts:
     environment: preview
     runs-on: ubuntu-latest
-    # env:
-    #   PLANETSCALE_SERVICE_TOKEN: ''
-    # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-    # PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Planetscale Setup
-        uses: planetscale/setup-pscale-action@v1
-      - name: Upload Planetscale Scripts Artifact
+      - name: Upload Planetscale scripts as Artifact
         uses: actions/upload-artifact@v3
         with:
           name: pscale-scripts
           path: ./.pscale/cli-helper-scripts/
-      - name: Check permissions of scripts & test executing one
-        # continue-on-error: true
-        run: |
-          ls -al ./.pscale/cli-helper-scripts/
-          echo "------------------------------------------"
-          chmod -R +x ./.pscale/cli-helper-scripts/
-          echo "after chmod"
-          ls -al ./.pscale/cli-helper-scripts/
-          echo "------------------------------------------"
-          ./.pscale/cli-helper-scripts/authenticate-ps.sh
 
-        # authenticate-ps.sh is just a prompt for user to authenticate if Planetscale service token and id not set as env
+      # Permission Loss: File permissions are not maintained during artifact upload. For example, if you make a file executable using chmod and then upload that file, post-download the file is no longer guaranteed to be set as an executable.
 
-  # dont need to use authenticate-ps.sh since already have setup-pscale-action
+      # - name: Test executing one authenticate-ps.sh
+      #   continue-on-error: true
+      #   run: |
+      #     ls -al ./.pscale/cli-helper-scripts/
+      #     echo "------------------------------------------"
+      #     chmod -R +x ./.pscale/cli-helper-scripts/
+      #     echo "after chmod"
+      #     ls -al ./.pscale/cli-helper-scripts/
+      #     echo "------------------------------------------"
+      #     ./.pscale/cli-helper-scripts/authenticate-ps.sh
+
+      # authenticate-ps.sh just executes Planetscale login prompt if Planetscale service token and id not set as env
+      # dont need to use authenticate-ps.sh since already have setup-pscale-action
 
   # Deploy Deploy Request
   deploy-dr:
@@ -68,25 +68,88 @@ jobs:
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
-      BRANCH_NAME: pr-31-cicd-test
     steps:
       - name: Download shell-scripts artifact
         uses: actions/download-artifact@v3
         with:
           name: pscale-scripts
           path: ./.pscale/cli-helper-scripts/
-      - name: Check if Deploy Request exists
+
+      - name: Make scripts excutable
+        working-directory: ./.pscale/cli-helper-scripts/
+        run: chmod -R +x .
+
+        # "chmod -R +x ." needed since upload-artifact action results in Permission Loss (files won't be executable), even if they were executable when committed to repo
+
+      - name: Retrieve branch if exists
+        id: get-branch
         working-directory: ./.pscale/cli-helper-scripts/
         run: |
-          ls -al .
-          chmod -R +x .
-          ls -al .
-          ./retrieve-deploy-request-info.sh ${PSCALE_DB_NAME} ${PSCALE_ORG_NAME} 43
+          . ./use-pscale-docker-image.sh
+          . ./ps-create-helper-functions.sh
+          create-deploy-request-info "$PSCALE_DB_NAME" "$PSCALE_ORG_NAME" 44
+          echo "Step Outputs: BRANCH_NAME / DB_NAME ORG_NAME / DEPLOY_REQUEST_URL / DEPLOY_REQUEST_NUMBER / BRANCH_URL"
+
+      # echo "in github runner / retrieve step / BRANCH_NAME: ${BRANCH_NAME}"
+
+      # doesn't work since env vars not shared between steps
+      # - name: Export this deploy request's branch as Env Variable
+      #   run: |
+      #     echo "in github runner / export step not using outputs / BRANCH_NAME: ${BRANCH_NAME}"
+
+      # this step is not required since we can just go direct to deployment if deploy-request exists
+      # - name: Check if Deploy Request exists
+      #   working-directory: ./.pscale/cli-helper-scripts/
+      #   run: |
+      #     BRANCH_NAME=${{ steps.get-branch.outputs.BRANCH_NAME }}
+      #     echo "in github runner / check DR step / BRANCH_NAME: ${BRANCH_NAME}"
+      #     . ./retrieve-deploy-request-info.sh
+      #     retrieve-deploy-request-info ${PSCALE_DB_NAME} ${PSCALE_ORG_NAME} ${PSCALE_DR_NUM}
+
+      # it's not obvious here since not passed as an argument, but retrieve-deploy-request-info.sh requires an env variable named BRANCH_NAME
+      # no need to export BRANCH_NAME to be useable inside of retrieve-deploy-request-info.sh
+
       - name: Deploy deploy request
         uses: planetscale/deploy-deploy-request-action@v3
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
-          number: 43
-# check if DR exists
+          number: 45
+          wait: true
+# check if DR exists - no need???
+
 # approve DR before deploy
+
+# get the dr for the branch, so you can check for the ff
+
+# get the DR num based on the branch
+
+# can check if it DR is open so that we can proceed with the deploy, because if it isnt open, it means previous DR was closed/rejected, a new DR needs to be created and approved, and TL missed reviewing the db changes before the PR merge/approval
+
+# check if issue-ops-ps-command /ps-merge, merge-deploy-request.sh, ps-create-helper-functions create-deployment and any other code, checks if DEPLOY_STATE=ready, DEPLOYABLE=YES, etc.
+
+# if it is closed, don't proceed with the deployment and prompt that a new DR needs to be created and reviewed
+
+# possibly only need to check STATE when getting the DR to see if the last DR is open/closed but Deploy step will fail if last DR is closed so does it matter checking the STATE?
+
+# check if you can hijack the job in the issue-ops-ps-commands.yml and reuse in your own workflow for merge deploy, etc.
+
+# workflow fails if DEPLOY_STATE=no_changes even if APPROVED=Yes & DEPLOYABLE=Yes
+
+# if no db changes, delete branch
+
+# if deploy-deploy-request-action is set with "wait: true" and auto-apply is disabled (gated deployment), this error occurs: Deploy-request 44 with unknown status: 'pending_cutover'
+# script doesnt take into account pending_cutover coz its indefinite when approver will apply the changes (gated deployments)
+
+# deploy-deploy-request-action fails when deployment has been applied but schema revert is still active (DEPLOY_STATE='complete_pending_revert', STATE=open, APPROVED=Yes, DEPLOYABLE=yes) / this must be because it is functionally merged with pscale main branch
+
+# "gated deployments" and "schema revert" features are still experimental
+
+# enable gated deployments (--auto-apply 'disabled' for pr merges with main and deploy requests to ffph_prod main
+
+# how do we get the Deploy Request Number?
+# start tracing it from merge-deploy-request.sh, merge-latest-open-deploy-request.sh and issue-ops-ps-commands /ps-merge
+
+# if the created branch already has a latest open DR (STATE=open), prevent creating new DR | already the default behavior of Pscale
+
+# once a deploy request has been merged and schema-revert period has lapsed, delete the branch immediately, to prevent problems with tracking db changes and feat-branches. one branch should correspond to only one DR with the ff: DEPLOY_STATE=complete, STATE=closed, APPROVED=Yes
