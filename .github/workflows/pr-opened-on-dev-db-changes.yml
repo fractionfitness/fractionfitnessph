@@ -40,7 +40,13 @@ env:
 
 jobs:
   get-scripts:
-    if: github.event.pull_request.merged == false
+    # covers case when pull_requests are closed and not merged | pr is cancelled/closed w/o merging
+    # succeeding job does not run if this job runs because their conditionals are mutually exclusive
+    # need to get scripts so that branch and deploy request can be closed/deleted if pr is closed and head branch is not merged into base branch
+    # separated from changed-files job to prevent checking out code with fetch-depth=0 and avoid getting changed files, if pr is cancelled
+    # if pr is cancelled, just need to close pscale branch and deploy requests
+    # if: github.event.pull_request.state == 'closed' && github.event.pull_request.merged == false
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,13 +58,17 @@ jobs:
           name: shell-scripts
           path: ./shell-scripts/
 
+  # covers pull_requests that are not 'closed' OR pull_requests that are 'closed' and 'merged' into base branch (dev)
   changed-files:
+    # needs ensures that this doesnt execute until 1st job is evaluated
+    needs: get-scripts
     # enclosing context values in ${{ }} turns them into strings and strings are truthy
+    # this job does not run if previous job was executed because their conditionals are mutually exclusive
     if: github.event.pull_request.state != 'closed' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       ALL_CHANGES: ${{ steps.changes.outputs.ALL_CHANGES }}
-      PRISMA_CHANGE: ${{ steps.changes.outputs.PRISMA_CHANGE }}
+      DB_CHANGES: ${{ steps.changes.outputs.DB_CHANGES }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -71,17 +81,17 @@ jobs:
         id: changes
         run: |
           echo "ALL_CHANGES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)" >> "${GITHUB_OUTPUT}"
-          echo "PRISMA_CHANGE=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)" >> "${GITHUB_OUTPUT}"
+          echo "DB_CHANGES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)" >> "${GITHUB_OUTPUT}"
       # - name: Set outputs as step-level env vars
       #   env:
       #     ALL_CHANGES: ${{ steps.changes.outputs.ALL_CHANGES }}
-      #     PRISMA_CHANGE: ${{ steps.changes.outputs.PRISMA_CHANGE }}
+      #     DB_CHANGES: ${{ steps.changes.outputs.DB_CHANGES }}
       #   run: |
-      #     echo "check env output - prisma: ${PRISMA_CHANGE} - all: ${ALL_CHANGES}"
+      #     echo "check env output - prisma: ${DB_CHANGES} - all: ${ALL_CHANGES}"
       # # doesnt work since step-level env vars
       # - name: Get outputs stet as step-level env vars
       #   run: |
-      #     echo "check env output - prisma: ${PRISMA_CHANGE} - all: ${ALL_CHANGES}"
+      #     echo "check env output - prisma: ${DB_CHANGES} - all: ${ALL_CHANGES}"
 
       # deprecated
       # echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
@@ -91,28 +101,21 @@ jobs:
       # echo "changed files head - all files: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | xargs)"
       # echo "changed files head - schema.prisma only: $(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.head.sha }} ${{ github.sha }} | grep schema.prisma$ | xargs)"
 
-      # - name: Upload Planetscale Scripts Artifact
-      #   # if there are DB Schema Changes
-      #   if: steps.changes.outputs.PRISMA_CHANGE
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: pscale-scripts
-      #     path: ./shell-scripts/pscale/
+      # still need to upload artifacts because previous job will not have been executed, if current job is running
+      - name: Upload Planetscale Scripts Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: shell-scripts
+          path: ./shell-scripts/
 
-      # - name: Upload Vercel Scripts Artifact
-      #   # pull request is not yet merged
-      #   if: github.event.pull_request.merged == false
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: vercel-scripts
-      #     path: ./shell-scripts/vercel/
-
-  # unmerged-closed-pr ||
+  # unmerged-closed-pr
   pscale-delete-branch:
     needs: changed-files
     # when PR is closed, branch should be deleted whether pr was merged or not
-    # if PR is merged, deploy req should be checked if 'complete'
-    if: github.event.pull_request.state == 'closed'
+    # if PR is merged, deploy req should be checked if DR_APPROVED='Yes' && DR_STATE='open' && DR_DEPLOY_STATE='ready' && DR_DEPLOYABLE
+    # this means, that the open DR for the pscale branch (linked to the PR) was already reviewed and approved, has db changes and ready for staging/deployment, and is deployable w/ no errors
+    # this job should only run if there are db changes
+    if: github.event.pull_request.state == 'closed' && needs.changed-files.outputs.DB_CHANGES
     runs-on: ubuntu-latest
     steps:
       - name: Download shell-scripts artifact
@@ -129,43 +132,81 @@ jobs:
           ./shell-scripts/pscale/check-branch-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}" "${PLANETSCALE_SERVICE_TOKEN_ID}" "${PLANETSCALE_SERVICE_TOKEN}"
           echo "step outputs: PSCALE_BRANCH_EXISTS"
 
+      #  include in dr-exists script to run npm run db:reset to make sure all pr head branch db changes have been included in DR? or should that be the responsibility of vercel deploy for PRs before proceeding to pscale delete branch?
       - name: Check if Deploy Request exists
-        # no need to check deploy req if pr is closed and unmerged since it will automatically be 'closed' (state) when branch is deleted
-        if: github.event.pull_request.merge == true
+        # no need to check deploy req if pr is closed and unmerged and just proceed directly to branch deletion, since it will automatically be 'closed' (DR_STATE) when branch is deleted
+        if: github.event.pull_request.merged == true
         id: dr_exists
         run: |
           chmod -R +x ./shell-scripts/pscale/check-dr-exists.sh
 
           ./shell-scripts/pscale/check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_NEW_BRANCH}" "${PSCALE_ORG_NAME}"
 
-          echo "outputs: PSCALE_DR_EXISTS / PSCALE_DR_NUMBER / PSCALE_DR_STATE / PSCALE_DR_DEPLOY_STATE
+          echo "outputs: DR_EXISTS / DR_NUMBER / DR_BRANCH / DR_INTO_BRANCH / DR_APPROVED / DR_STATE / DR_DEPLOY_STATE / DR_DEPLOYABLE
 
-        # echo "outputs: / PSCALE_DR_EXISTS: ${PSCALE_DR_EXISTS} / PSCALE_DR_NUMBER: ${PSCALE_DR_NUMBER} / PSCALE_DR_STATE: ${PSCALE_DR_STATE} / PSCALE_DR_DEPLOY_STATE: ${PSCALE_DR_DEPLOY_STATE}"
+      # should not happen since no PR merge should be done for a feat branch (w/ db changes) w/o a corresponding pscale branch and deploy request
+      # if deploy request and branch does not exist, job should fail to prompt team to create them, have them approved, only then will the workflow restart
+      # otherwise succeeding steps will still execute since no exit 1 code
+      # - name: Create Deploy Request if non-existent???
 
+      # CONTINUE HERE:
+      # ISSUES:
+      # need a husky script that checks commit messages and makes sure no | symbols used otherwise, we may gen an get an error in workflow is using echo with the git commit message
+      # find out how to use continue-on-error, steps.step_id.outcome|conclusion | failure(), success(), always(), cancelled()
+      # issues with my if conditionals | some steps should not execute if a preceeding step failed and vice versa
+      # some of my steps should give out error codes of 1, like if no branch or deploy request
+      # what happens when shell-scripts dont have exit codes??? if a deploy request/branch doesnt exist, will executing the shell script produce an exit code of 1?? produces an exit code of 0 unless i output exit codes in the shell script
+      # need to output exit codes in shell scripts, especially when using pscale and vercel commands since I want to find out if the shell script succeeded and not have to keep using outputs to find out if a branch or DR exists, etc. | also useful since default behavior of workflow actions is to cancel job/steps if previous job/step failed
+      # how to use xargs and awk vs grep
+      # specific jobs should be factored out into reusable workflows
+
+      # already have actions for create branch, deploy deploy request, create branch password, create deploy request action, setup pscale
+      # might not need deploy deploy request script, or to check if branch or deploy request exists when creating these but might still need to check if exists when deploying & closing DR and closing branch
+      # find out if deploy deploy request action also applies the changes or you need to "pscale deploy-request apply"
+      # check out pscale helper scripts | but missing script for "deploy-request apply" since maybe its meant to be manually triggered and not automated, otherwise, why use gated deployments
+
+      # combine script for check DR exists and approve into one
+      #./shell-script/pscale/deploy-request.sh <check|deploy|apply> [args,...]
+      # always append 2>&1 to the end of a pscale/vercel command inside of eval
+      # always echo ${output}
+
+      # DR should be approved prior to Deploy/Stage of DR
       - name: Approve Deploy Request
-        if: github.event.pull_request.merge == true && steps.dr_exists.outputs.PSCALE_DR_EXISTS == true && steps.dr_exists.outputs.PSCALE_DR_STATE == 'open' && steps.dr_exists.outputs.PSCALE_DR_DEPLOY_STATE == 'ready'
+        id: dr_approval
+        if: github.event.pull_request.merged == true && steps.dr_exists.outputs.DR_APPROVED == 'No' && steps.dr_exists.outputs.DR_STATE == 'open' && steps.dr_exists.outputs.DR_DEPLOY_STATE == 'ready' && steps.dr_exists.outputs.DR_DEPLOYABLE == 'Yes'
         run: |
-          echo "check if deploy req status is 'complete' \
-            if not complete
+          echo " pscale deploy-request review ffph_dev dr_num --approve "
+          echo "DR_APPROVED=Yes" >> "${GITHUB_OUTPUT}"
 
-      # pscale automatically closes DR when branch is closed so no need to close it when pull_request.merge == false | just need to make sure branch is deleted
-
-      - name: Delete Branch
-
-      - name: Approve Deploy Request
-        if: steps.dr_exists.outputs.PSCALE_DR_EXISTS == true
+      - name: Deploy or Stage Deploy Request & Apply Changes
+        # prevents deployment of DR_APPROVED='No', DR_STATE='closed', DR_DEPLOY_STATE='no_changes|error|other states', DR_DEPLOYABLE='No'
+        #  what happens if DR_APPROVED='Yes' in id=dr_exists???
+        if: ${{ github.event.pull_request.merged == true && (steps.dr_approval.outputs.DR_APPROVED == 'Yes' || steps.dr_exists.outputs.DR_APPROVED == 'Yes' ) }}
         run: |
-          echo "asdas"
+          echo " pscale deploy-request edit ffph_dev dr_num --auto-apply 'enable' && pscale deploy-request deploy ffph_dev dr_num "
+
+      # NOTE: deployed changes will not be permanent (DR_DEPLOY_STATE=complete && DR_STATE=closed) until after schema-revert period is finished or is skipped
+
+      # MOVE THIS TO THE TOP
+      # pscale automatically closes DR when branch is deleted so no need to close it when pull_request.merged == false | just need to make sure branch is deleted
+      - name: Pscale Delete Branch if PR is closed and Head Branch is unmerged into Base Branch
+        if: github.event.pull_request.merged == false
+        run: |
+          echo "immediately delete for PRs that are closed and not merged"
 
       #  only delete branch when pr merge is true if:
-      #  dr state=
-      if: steps.dr_exists.outputs.PSCALE_DR_EXISTS == false && github.event.pull_request.merge == true
-      # - name: Delete Pscale Branch
+      # ideally, we should wait until DR_APPROVED=Yes, DR_STATE=closed, and DR_DEPLOY_STATE=complete before deleting branch
+      # how do I check if deploy/stage DR & apply changes have succeeded???
+      # I think this should just be a separate workflow for this case, where it checks for the state, when a manual trigger (workflow_dispatch) is activated
+      - name: Pscale Delete Branch if PR is closed and merged
+        if: true
+        run: |
+          echo "this should be a manual trigger"
 
   pscale-create-branch-deploy-request:
     needs: changed-files
     # pull request is not yet merged && w/ db changes
-    if: github.event.pull_request.merged == false && needs.changed-files.outputs.PRISMA_CHANGE
+    if: github.event.pull_request.merged == false && needs.changed-files.outputs.DB_CHANGES
     environment: preview # Github Environment
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
@@ -191,7 +232,7 @@ jobs:
       PSCALE_BRANCH_EXISTS: ${{ steps.check_branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
       PSCALE_BRANCH_PWORD_EXISTS: ${{ steps.check_pword_exists.outputs.PSCALE_BRANCH_PWORD_EXISTS }}
       PSCALE_BRANCH_PWORD_CREATED: ${{ steps.get_password.outputs.PSCALE_BRANCH_PWORD_CREATED }}
-      PRISMA_CHANGE: ${{ needs.changed-files.outputs.PRISMA_CHANGE }}
+      DB_CHANGES: ${{ needs.changed-files.outputs.DB_CHANGES }}
 
       # how to set if either has a value
       # these values may not be needed since no succeeding job (connected to this job) needs this
@@ -205,7 +246,7 @@ jobs:
     steps:
       - name: Check Env Values
         run: |
-          echo "with db changes? ${{ needs.changed-files.outputs.PRISMA_CHANGE }}"
+          echo "with db changes? ${{ needs.changed-files.outputs.DB_CHANGES }}"
           echo "all changes: ${{ needs.changed-files.outputs.ALL_CHANGES }}"
           echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
           echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
@@ -410,22 +451,22 @@ jobs:
           echo "create_deploy_request || check_dr_exists DR number: ${{ steps.create_deploy_request.outputs.number || steps.check_dr_exists.outputs.PSCALE_DR_NUM}}"
 
       - name: With DB Changes
-        if: needs.changed-files.outputs.PRISMA_CHANGE
+        if: needs.changed-files.outputs.DB_CHANGES
         run: |
           echo "running step for with db changes"
 
       - name: Without DB Changes
         # converts output into String(Boolean) and then can be compared to 'false'
-        # if: ${{ !needs.changed-files.outputs.PRISMA_CHANGE }} == 'false'
+        # if: ${{ !needs.changed-files.outputs.DB_CHANGES }} == 'false'
         # or check if empty string '' meaning no value | ! operator doesn't work at step-level conditional
-        if: needs.changed-files.outputs.PRISMA_CHANGE == ''
+        if: needs.changed-files.outputs.DB_CHANGES == ''
         run: |
           echo "running step for no db changes"
 
   vercel-deploy-pr-feat-dev:
     needs: pscale-create-branch-deploy-request
     # pull request is not yet merged && w/ db changes
-    if: github.event.pull_request.merged == false && needs.pscale-create-branch-deploy-request.outputs.PRISMA_CHANGE
+    if: github.event.pull_request.merged == false && needs.pscale-create-branch-deploy-request.outputs.DB_CHANGES
     environment: preview # Github Environment
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -516,7 +557,7 @@ jobs:
   # without schema.prisma/db changes
   without-db-changes:
     needs: changed-files
-    if: github.event.pull_request.merged == false && !needs.changed-files.outputs.PRISMA_CHANGE
+    if: github.event.pull_request.merged == false && !needs.changed-files.outputs.DB_CHANGES
     environment: preview # Github Environment
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
@@ -526,7 +567,7 @@ jobs:
     steps:
       - name: Check Env Values
         run: |
-          echo "with db changes? ${{ needs.changed-files.outputs.PRISMA_CHANGE }}"
+          echo "with db changes? ${{ needs.changed-files.outputs.DB_CHANGES }}"
           echo "all changes: ${{ needs.changed-files.outputs.ALL_CHANGES }}"
           echo "GITHUB_PR_REFNUM: ${GITHUB_PR_REFNUM}"
           echo "GITHUB_PR_TITLE ${GITHUB_PR_TITLE}"
@@ -551,7 +592,8 @@ jobs:
   # delete pr branch
 
   pscale-merge-pr-branch-approve-deploy-request:
-    if: github.event.pull_request.merged == true
+    #  dont execute yet
+    if: github.event.pull_request.merged == true && false
     environment: preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
