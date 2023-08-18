@@ -42,10 +42,14 @@ fi
 # ref: https://vercel.com/docs/concepts/deployments/preview-deployments
 
 # turn on deployments to pull requests
-if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "staging" || "$VERCEL_GIT_COMMIT_REF" == "dev" || x"${VERCEL_GIT_PULL_REQUEST_ID}" != "x" ]] ; then
+# if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "staging" || "$VERCEL_GIT_COMMIT_REF" == "dev" || x"${VERCEL_GIT_PULL_REQUEST_ID}" != "x" ]] ; then
 
 # turn off deployments to pull requests
 # if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "staging" || "$VERCEL_GIT_COMMIT_REF" == "dev" ]] ; then
+
+# Vercel should only automatically deploy when pushes/merges are made to Branches: "main" and "dev"
+# deployment for branches (feat, staging, etc.) to be merged (via PR) into "dev" or "main" should be initiated by github actions workflows
+if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "dev" ]] ; then
 
   # Proceed with the build
   echo "VERCEL_GIT_COMMIT_REF ${VERCEL_GIT_COMMIT_REF}"
