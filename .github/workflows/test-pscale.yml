@@ -1,0 +1,92 @@
+name: Test Pscale Workflow
+
+on:
+  # to manually trigger if I somehow missed an activity type
+  workflow_dispatch:
+  pull_request:
+    # branches: [feat/no-ref/cicd-setup, test-pr]
+    branches: [dev]
+    types:
+      [
+        opened,
+        synchronize,
+        edited,
+        reopened,
+        ready_for_review,
+        unlocked,
+        review_requested,
+        closed,
+      ]
+
+env:
+  GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
+  PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+  PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+
+jobs:
+  # download scripts
+  # ls -al
+  # chmod
+  # upload artifacts
+  get-scripts:
+    environment: preview
+    runs-on: ubuntu-latest
+    # env:
+    #   PLANETSCALE_SERVICE_TOKEN: ''
+    # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+    # PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Upload Planetscale Scripts Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pscale-scripts
+          path: ./.pscale/cli-helper-scripts/
+      - name: Check permissions of scripts & test executing one
+        # continue-on-error: true
+        run: |
+          ls -al ./.pscale/cli-helper-scripts/
+          echo "------------------------------------------"
+          chmod -R +x ./.pscale/cli-helper-scripts/
+          echo "after chmod"
+          ls -al ./.pscale/cli-helper-scripts/
+          echo "------------------------------------------"
+          ./.pscale/cli-helper-scripts/authenticate-ps.sh
+
+        # authenticate-ps.sh is just a prompt for user to authenticate if Planetscale service token and id not set as env
+
+  # dont need to use authenticate-ps.sh since already have setup-pscale-action
+
+  # Deploy Deploy Request
+  deploy-dr:
+    needs: get-scripts
+    runs-on: ubuntu-latest
+    environment: preview
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      BRANCH_NAME: pr-31-cicd-test
+    steps:
+      - name: Download shell-scripts artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pscale-scripts
+          path: ./.pscale/cli-helper-scripts/
+      - name: Check if Deploy Request exists
+        working-directory: ./.pscale/cli-helper-scripts/
+        run: |
+          ls -al .
+          chmod -R +x .
+          ls -al .
+          ./retrieve-deploy-request-info.sh ${PSCALE_DB_NAME} ${PSCALE_ORG_NAME} 43
+      - name: Deploy deploy request
+        uses: planetscale/deploy-deploy-request-action@v3
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          number: 43
+# check if DR exists
+# approve DR before deploy
