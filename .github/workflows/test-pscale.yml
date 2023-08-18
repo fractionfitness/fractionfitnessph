@@ -1,0 +1,42 @@
+name: Pull Request on Feat into Dev
+
+on:
+  # to manually trigger if I somehow missed an activity type
+  workflow_dispatch:
+  pull_request:
+    # branches: [feat/no-ref/cicd-setup, test-pr]
+    branches: [dev]
+    types:
+      [
+        opened,
+        synchronize,
+        edited,
+        reopened,
+        ready_for_review,
+        unlocked,
+        review_requested,
+        closed,
+      ]
+
+env:
+  GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
+  PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+  PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+
+jobs:
+  # Deploy Deploy Request
+  deploy-dr:
+    runs-on: ubuntu-latest
+    environment: preview
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Deploy deploy request
+        uses: planetscale/deploy-deploy-request-action@v3
+        with:
+          org_name: ${PSCALE_ORG_NAME}
+          database_name: ${PSCALE_DB_NAME}
+          number: 43
