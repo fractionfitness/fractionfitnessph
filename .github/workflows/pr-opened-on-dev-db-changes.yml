@@ -5,7 +5,8 @@ on:
   workflow_dispatch:
   pull_request:
     # branches: [feat/no-ref/cicd-setup, test-pr]
-    branches: [dev]
+    # branches: [dev] # temporarily disable workflow on PRs into dev to test other workflows
+    branches: [main]
     types:
       [
         opened,
