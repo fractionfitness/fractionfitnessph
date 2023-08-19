@@ -17,19 +17,23 @@ on:
         review_requested,
         closed,
       ]
+  push:
+    branches: [test-workflows]
 
 env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
   PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
   PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
   PSCALE_BRANCH_NAME: 'pr-31-cicd-test'
+  PSCALE_PWORD_NAME: 'pr-31-admin'
 
 jobs:
   # download scripts
   # ls -al
   # chmod
   # upload artifacts
-  get-scripts:
+
+  upload-scripts:
     environment: preview
     runs-on: ubuntu-latest
     env:
@@ -38,11 +42,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Upload Planetscale scripts as Artifact
+      - name: Upload shell scripts as Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: pscale-scripts
-          path: ./.pscale/cli-helper-scripts/
+          name: scripts
+          if-no-files-found: error
+          path: |
+            ./.pscale/cli-helper-scripts
+            ./my-scripts/
 
       # Permission Loss: File permissions are not maintained during artifact upload. For example, if you make a file executable using chmod and then upload that file, post-download the file is no longer guaranteed to be set as an executable.
 
@@ -60,36 +67,96 @@ jobs:
       # authenticate-ps.sh just executes Planetscale login prompt if Planetscale service token and id not set as env
       # dont need to use authenticate-ps.sh since already have setup-pscale-action
 
-  # Deploy Deploy Request
-  deploy-dr:
-    needs: get-scripts
+  create-password:
+    if: github.event_name == 'push'
+    needs: upload-scripts
     runs-on: ubuntu-latest
     environment: preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
     steps:
-      - name: Download shell-scripts artifact
+      - name: Check event webhook payload
+        run: echo "${{ github.event_name.push }}"
+
+      - name: Download scripts artifact
         uses: actions/download-artifact@v3
         with:
-          name: pscale-scripts
-          path: ./.pscale/cli-helper-scripts/
+          name: scripts
+          path: ./
+
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+
+      - name: Delete Pscale Branch Password if exists
+        working-directory: ./my-scripts/pscale
+        run: |
+          . ./delete-branch-password.sh
+          delete-branch-password ${PSCALE_DB_NAME} ${PSCALE_BRANCH_NAME} ${PSCALE_ORG_NAME} pr-31-admin
+
+      - name: Create Pscale Branch Password
+        id: create_password
+        uses: planetscale/create-branch-password-action@v3
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          branch_name: ${{ env.PSCALE_BRANCH_NAME }}
+          name: ${{ env.PSCALE_PWORD_NAME }}
+
+      - name: Get Planetscale branch credentials
+        id: get_password
+        env:
+          HOSTNAME: ${{ steps.create_password.outputs.hostname }}
+          USERNAME: ${{ steps.create_password.outputs.username }}
+          PASSWORD: ${{ steps.create_password.outputs.password }}
+        shell: bash
+        run: |
+          echo "mysql://${USERNAME}:${PASSWORD}@${HOSTNAME}/${PSCALE_DB_NAME}?sslaccept=strict" | tee -a "pscale-conn-string.txt"
+
+        # "tee -a" appends value to multiple files
+        # cannot set secret as output as github actions will mask it with ****
+        # if appending to multiple files
+        # echo "${PSCALE_CONN_STRING}" | tee -a "${GITHUB_OUTPUT}" "pscale-conn-string.txt"
+
+      - name: Upload Planetscale Connection String
+        uses: actions/upload-artifact@v3
+        with:
+          name: pscale-conn-string
+          path: pscale-conn-string.txt
+
+  # Deploy Deploy Request
+  deploy-dr:
+    if: github.event_name == 'pull_request'
+    needs: upload-scripts
+    runs-on: ubuntu-latest
+    environment: preview
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+    steps:
+      - name: Download scripts artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: scripts
+          path: ./
 
       - name: Make scripts excutable
         working-directory: ./.pscale/cli-helper-scripts/
-        run: chmod -R +x .
+        run: chmod -R +x ./
 
         # "chmod -R +x ." needed since upload-artifact action results in Permission Loss (files won't be executable), even if they were executable when committed to repo
 
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
       - name: Retrieve branch if exists
         id: get-branch
         working-directory: ./.pscale/cli-helper-scripts/
         run: |
-          . ./use-pscale-docker-image.sh
           . ./ps-create-helper-functions.sh
           create-deploy-request-info "$PSCALE_DB_NAME" "$PSCALE_ORG_NAME" 44
           echo "Step Outputs: BRANCH_NAME / DB_NAME ORG_NAME / DEPLOY_REQUEST_URL / DEPLOY_REQUEST_NUMBER / BRANCH_URL"
 
+      # . ./use-pscale-docker-image.sh
       # echo "in github runner / retrieve step / BRANCH_NAME: ${BRANCH_NAME}"
 
       # doesn't work since env vars not shared between steps
@@ -153,3 +220,11 @@ jobs:
 # if the created branch already has a latest open DR (STATE=open), prevent creating new DR | already the default behavior of Pscale
 
 # once a deploy request has been merged and schema-revert period has lapsed, delete the branch immediately, to prevent problems with tracking db changes and feat-branches. one branch should correspond to only one DR with the ff: DEPLOY_STATE=complete, STATE=closed, APPROVED=Yes
+
+# delete branch after applying changes and even before schema-revert has lapsed | let skip-revert time-out just in case you need to revert changes | no need to skip-revert since branch will be closed anyway and no new DRs can be created while STATE=open for DEPLOY_STATE=complete_pending_revert
+
+# if schema-revert is performed, corresponding branch merge into dev should be reverted but how is this done?
+
+# if you close a pr, pscale branch should also automatically be deleted
+
+# prioritize gh actions for creating branch, password, deploy request, deploying DR, deleting branch (manually/automated)
