@@ -77,9 +77,6 @@ jobs:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
     steps:
-      - name: Check event webhook payload
-        run: echo "${{ github.event_name }}"
-
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
         with:
@@ -97,16 +94,19 @@ jobs:
           wait: true
           check_exists: true
 
-      # next step (Delete Branch Password needs this)
+      # next step (Delete Branch Password) needs this
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
+
       - name: Delete Pscale Branch Password if exists
+        if: false
         working-directory: ./my-scripts/pscale
         run: |
           . ./delete-branch-password.sh
           delete-branch-password ${PSCALE_DB_NAME} ${PSCALE_BRANCH_NAME} ${PSCALE_ORG_NAME} pr-31-admin
 
       - name: Create Pscale Branch Password
+        if: false
         id: create_password
         uses: planetscale/create-branch-password-action@v3
         with:
@@ -116,6 +116,7 @@ jobs:
           name: ${{ env.PSCALE_PWORD_NAME }}
 
       - name: Get Planetscale branch credentials
+        if: false
         id: get_password
         env:
           HOSTNAME: ${{ steps.create_password.outputs.hostname }}
@@ -131,10 +132,30 @@ jobs:
         # echo "${PSCALE_CONN_STRING}" | tee -a "${GITHUB_OUTPUT}" "pscale-conn-string.txt"
 
       - name: Upload Planetscale Connection String
+        if: false
         uses: actions/upload-artifact@v3
         with:
-          name: pscale-conn-string
+          name: creds-${{ env.PSCALE_PWORD_NAME }}
           path: pscale-conn-string.txt
+
+      - name: Download scripts artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: creds-${{ env.PSCALE_PWORD_NAME }}
+          path: ./
+
+      # get string so succeeding steps can use
+      - name: Get Pscale Branch connection string
+        id: get_pword_artifact
+        run: |
+          DATABASE_URL=$(eval "cat ./pscale-conn-string.txt")
+          echo "DB URL: ${DATABASE_URL}"
+          echo "DATABASE_URL=${DATABASE_URL}"" >> $GITHUB_OUTPUT
+
+      - name: Check DATABASE_URL
+        run: |
+          echo "env DATABASE_URL: ${DATABASE_URL}"
+          echo "outputs DATABASE_URL: ${{ steps.get_pword_artifact.outputs.DATABASE_URL }}"
 
   # Deploy Deploy Request
   deploy-dr:
