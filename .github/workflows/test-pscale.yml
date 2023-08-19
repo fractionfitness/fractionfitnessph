@@ -33,6 +33,7 @@ jobs:
   # chmod
   # upload artifacts
 
+  # change this to prep: upload scripts, check if w/ db changes
   upload-scripts:
     environment: preview
     runs-on: ubuntu-latest
@@ -67,7 +68,7 @@ jobs:
       # authenticate-ps.sh just executes Planetscale login prompt if Planetscale service token and id not set as env
       # dont need to use authenticate-ps.sh since already have setup-pscale-action
 
-  create-password:
+  create-branch-pword-dr:
     if: github.event_name == 'push'
     needs: upload-scripts
     runs-on: ubuntu-latest
@@ -77,7 +78,7 @@ jobs:
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
     steps:
       - name: Check event webhook payload
-        run: echo "${{ github.event_name.push }}"
+        run: echo "${{ github.event_name }}"
 
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
@@ -85,9 +86,20 @@ jobs:
           name: scripts
           path: ./
 
+      - name: Create Pscale Branch
+        uses: planetscale/create-branch-action@v4
+        id: create_branch
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME}}
+          database_name: ${{ env.PSCALE_DB_NAME}}
+          branch_name: ${{ env.PSCALE_BRANCH_NAME}}
+          from: main
+          wait: true
+          check_exists: true
+
+      # next step (Delete Branch Password needs this)
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
-
       - name: Delete Pscale Branch Password if exists
         working-directory: ./my-scripts/pscale
         run: |
