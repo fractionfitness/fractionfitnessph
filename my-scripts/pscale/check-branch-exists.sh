@@ -2,6 +2,8 @@
 
 # $1 DB $2 BRANCH $3 ORG
 
+# Check how many branches in pscale account | if = 2, then echo "delete pscale branch and re-run workflow" then exit 1 | workflow must fail so that vercel deployment also fails
+
 # Check if branch already exists
 output=$(eval "pscale branch show $1 $2 --org $3 --service-token-id $4 --service-token $5" 2>&1)
 exit_status=$?
@@ -9,9 +11,11 @@ echo "output of pscale branch show: ${output}"
 if [ $exit_status -eq 0 ]; then
   echo "$2 (Branch) exists on Planetscale $3 (Org) $1 (Database)"
   EXISTS=true
+  exit 0
 else
   echo "$2 (Branch) does not exist on Planetscale $3 (Org) $1 (Database)"
   EXISTS=false
+  exit 1
 fi
 
 echo "PSCALE_BRANCH_EXISTS: ${EXISTS}"
