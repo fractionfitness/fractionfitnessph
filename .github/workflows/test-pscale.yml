@@ -22,10 +22,7 @@ on:
 
 env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
-  PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
-  PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
-  PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
-  PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
+
   # PSCALE_BRANCH_NAME: 'pr-31-cicd-test'
   # PSCALE_PWORD_NAME: 'pr-31-admin'
 
@@ -78,6 +75,10 @@ jobs:
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
+      PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
     steps:
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
@@ -85,6 +86,7 @@ jobs:
           name: scripts
           path: ./
 
+      #  different github branch name based on event (push vs. pull_request)
       # Pscale Branch Name is based on Github Branch Name and PR ref number
       - name: Get Pscale Branch Name
         id: branch-name
@@ -93,17 +95,16 @@ jobs:
         run: |
           chmod -R +x ./
 
-          GITHUB_BRANCH_NAME=${{ github.event.pull_request.head.ref }}
+          GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
 
           echo "GITHUB_BRANCH_NAME based on ref: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          echo "GITHUB_BRANCH_NAME based on pull_request event: ${{ github.event.pull_request.head.ref }}"
 
           ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
 
           echo "outputs: PSCALE_BRANCH_NAME"
 
-        # GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+        # echo "GITHUB_BRANCH_NAME based on push event: ${{ github.event.push.ref}}"
 
       - name: Create Pscale Branch
         uses: planetscale/create-branch-action@v4
@@ -130,11 +131,12 @@ jobs:
           PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
           ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
+
           echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-      # PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ]  | .[0].id "`
+      # PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ] | .[0].id "`
 
-      # if [ "${output}" != null ]; then
+      # if [ "${output}" != 'null' ]; then
       #   export EXISTING_PWORD_ID="${PWORD_ID}"
       # fi
 
@@ -143,37 +145,41 @@ jobs:
       # echo "EXISTING_PWORD_ID: ${EXISTING_PWORD_ID}"
 
       # can possibly move this to job: prep
-      # only check cache if an existing pscale password exists
+      # only check cache (not downloaded), if an existing password exists in planetscale
       - name: Check if Cache exists for Branch Password
-        if: steps.existing_pword.outputs.EXISTING_PWORD_ID != ''
+        if: steps.existing_pword.outputs.EXISTING_PWORD_ID != 'null'
         id: check_cache_pword
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v3
         with:
           path: ./branch-conn-string.txt
           key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
           lookup-only: true
 
-      # if cache hit, download cached pscale branch conn string file for use in succeeding steps or jobs
+      # download cached pscale branch conn string file
       - name: Get Branch Connection String from Cache Hit
         if: steps.check_cache_pword.outputs.cache-hit == 'true'
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v3
         with:
           path: ./branch-conn-string.txt
           key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
 
-      - name: Delete Branch Password if exists
-        if: steps.check_cache_pword.outputs.cache-hit != 'true' || steps.existing_pword.outputs.EXISTING_PWORD_ID == ''
+      # delete if password exists & cache miss
+      - name: Delete Branch Password if exists & cache miss
+        if: steps.existing_pword.outputs.EXISTING_PWORD_ID != 'null' && steps.check_cache_pword.outputs.cache-hit != 'true'
         working-directory: ./my-scripts/pscale
         shell: bash
         run: |
+          echo "pword id: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}"
           export PSCALE_PWORD_NAME=${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
+          export PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}
 
           . ./delete-branch-password.sh
 
           delete-branch-password ${PSCALE_DB_NAME} ${PSCALE_BRANCH_NAME} ${PSCALE_ORG_NAME} ${PSCALE_PWORD_NAME}
 
+      # create if nonexistent password or cache miss
       - name: Create Branch Password
-        if: steps.check_cache_pword.outputs.cache-hit != 'true' || steps.existing_pword.outputs.EXISTING_PWORD_ID == ''
+        if: steps.existing_pword.outputs.EXISTING_PWORD_ID == 'null' || steps.check_cache_pword.outputs.cache-hit != 'true'
         id: create_pword
         uses: planetscale/create-branch-password-action@v3
         with:
@@ -182,21 +188,24 @@ jobs:
           branch_name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
           name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}
 
+      # if: steps.check_cache_pword.outputs.cache-hit != 'true'
       - name: Get Created Branch Credentials
         id: credentials
-        if: steps.check_cache_pword.outputs.cache-hit != 'true'
+        if: steps.create_pword.outcome == 'success'
         env:
           HOSTNAME: ${{ steps.create_pword.outputs.hostname }}
           USERNAME: ${{ steps.create_pword.outputs.username }}
           PASSWORD: ${{ steps.create_pword.outputs.password }}
         shell: bash
+        working-directory: ./my-scripts/pscale/
         run: |
-          echo "mysql://${USERNAME}:${PASSWORD}@${HOSTNAME}/${PSCALE_DB_NAME}?sslaccept=strict" | tee -a "branch-conn-string.txt"
+          echo "mysql://${USERNAME}:${PASSWORD}@${HOSTNAME}/${PSCALE_DB_NAME}?sslaccept=strict" | tee -a "../../branch-conn-string.txt"
 
           PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
           PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
           ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
+
           echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
         # CREATED_PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ]  | .[0].id "`
@@ -204,7 +213,7 @@ jobs:
         # echo "CREATED_PWORD_ID=${CREATED_PWORD_ID}" >> $GITHUB_OUTPUT
 
         # echo "check here---------------------------------"
-        # if [ ${{ steps.create_pword.outputs.password }} != '' ]; then
+        # if [ ${{ steps.create_pword.outputs.password }} != 'null' ]; then
         #   echo "password: ${{ steps.create_pword.outputs.password }}"
         # fi
         # echo "password: ${{ steps.create_pword.outputs.password }}"
@@ -223,16 +232,16 @@ jobs:
       #     echo "USERNAME ${{ steps.create_pword.outputs.username }}"
 
       # upload cached pscale branch conn string file for use in succeeding steps or jobs
-      # ready for use in succeeding steps
-      # for succeeding jobs, just use cache action again to download cached file
-      - name: Cache Branch Connection String on Cache Miss
-        if: steps.check_cache_pword.outputs.cache-hit != 'true'
-        uses: actions/cache@v3
+      # no need to restore since on the next workflow run, there will be a cache hit and there will be no new branch conn string, that is generated, to upload
+      # if: steps.check_cache_pword.outputs.cache-hit != 'true'
+      - name: Cache newly created Branch Connection String on Cache Miss
+        if: steps.create_pword.outcome == 'success'
+        uses: actions/cache/save@v3
         with:
           path: ./branch-conn-string.txt
-          key: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}-${{ steps.credentials.outputs.EXISTING_PWORD_ID }}
+          key: ${{ steps.credentials.outputs.EXISTING_PWORD_NAME}}-${{ steps.credentials.outputs.EXISTING_PWORD_ID }}
 
-      # get branch conn string from cached file for use in succeeding steps
+      # parse branch conn string from file for use in succeeding steps
       - name: Output Database Url from Branch connection string
         id: db_url
         run: |
@@ -240,12 +249,12 @@ jobs:
 
           echo "DATABASE_URL=${DATABASE_URL}" >> ${GITHUB_OUTPUT}
 
-      # used for checking conn string if coincides with pscale value
+      # used for checking conn string if it coincides with pscale value
       # no need to implement artifacts to store branch conn string
       - name: Upload Branch Connection String
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}
+          name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
           path: ./branch-conn-string.txt
 
   # Deploy Deploy Request

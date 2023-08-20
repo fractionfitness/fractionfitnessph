@@ -4,6 +4,10 @@ function delete-branch-password {
     local ORG_NAME=$3
     local PWORD_NAME=${4,,}
 
+    echo "DB_NAME: ${DB_NAME}"
+    echo "BRANCH_NAME: ${BRANCH_NAME}"
+    echo "PWORD_NAME: ${PWORD_NAME}"
+
     # delete password if it already existed
     # first, list password if it exists
     local raw_output=`pscale password list "$DB_NAME" "$BRANCH_NAME" --org "$ORG_NAME" --format json `

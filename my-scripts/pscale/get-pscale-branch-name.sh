@@ -8,7 +8,7 @@ GITHUB_PR_NUMBER=$2
 
 # check if GITHUB_BRANCH_NAME has a corresponding Issue Ref Number
 NUMERIC_REGEX='^[0-9]+$'
-REF_NUM=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{print $GITHUB_PR_NUMBER}')
+REF_NUM=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{print $2}')
 
 # check if it is a number and not 'noref'
 # do not enclose NUMERIC_REGEX in "" because it will treat the regex as a string
@@ -20,16 +20,16 @@ if [[ "${REF_NUM}" =~ ${NUMERIC_REGEX} ]]; then
   echo "${SHORTENED_GH_BRANCH_NAME}"
 
   if [ -z "${PR_NUMBER}" ]; then
-    export PSCALE_BRANCH_NAME="${SHORTENED_BRANCH_NAME}"
+    export PSCALE_BRANCH_NAME="${SHORTENED_GH_BRANCH_NAME}"
   else
-    export PSCALE_BRANCH_NAME="${SHORTENED_BRANCH_NAME}-pr-${PR_NUMBER}"
+    export PSCALE_BRANCH_NAME="${SHORTENED_GH_BRANCH_NAME}-pr-${PR_NUMBER}"
   fi
 
   echo "PSCALE_BRANCH_NAME: ${PSCALE_BRANCH_NAME}"
   echo "PSCALE_BRANCH_NAME=${PSCALE_BRANCH_NAME}" >> "${GITHUB_OUTPUT}"
 
 else
-  # echo "REF_NUM: $REF_NUM"
+  echo "REF_NUM: $REF_NUM"
 
   echo -e "Error: Github Branch Name must correspond to a Github Issue Reference Number. \
   \nPlease create an Issue and connect it to your Github Branch. \
