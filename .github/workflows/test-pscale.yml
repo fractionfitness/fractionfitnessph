@@ -24,8 +24,10 @@ env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
   PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
   PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
-  PSCALE_BRANCH_NAME: 'pr-31-cicd-test'
-  PSCALE_PWORD_NAME: 'pr-31-admin'
+  PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
+  PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
+  # PSCALE_BRANCH_NAME: 'pr-31-cicd-test'
+  # PSCALE_PWORD_NAME: 'pr-31-admin'
 
 jobs:
   # download scripts
@@ -83,14 +85,34 @@ jobs:
           name: scripts
           path: ./
 
+      # Pscale Branch Name is based on Github Branch Name and PR ref number
+      - name: Get Pscale Branch Name
+        id: branch-name
+        working-directory: ./my-scripts/pscale/
+        shell: bash
+        run: |
+          chmod -R +x ./
+
+          GITHUB_BRANCH_NAME=${{ github.event.pull_request.head.ref }}
+          GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
+
+          echo "GITHUB_BRANCH_NAME based on ref: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "GITHUB_BRANCH_NAME based on pull_request event: ${{ github.event.pull_request.head.ref }}"
+
+          ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
+
+          echo "outputs: PSCALE_BRANCH_NAME"
+
+        # GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+
       - name: Create Pscale Branch
         uses: planetscale/create-branch-action@v4
         id: create_branch
         with:
           org_name: ${{ env.PSCALE_ORG_NAME}}
           database_name: ${{ env.PSCALE_DB_NAME}}
-          branch_name: ${{ env.PSCALE_BRANCH_NAME}}
-          from: main
+          branch_name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}
+          from: ${{ env.PSCALE_SRC_BRANCH }}
           wait: true
           check_exists: true
 
@@ -102,16 +124,23 @@ jobs:
       - name: Get Branch Password if exists
         id: existing_pword
         shell: bash
+        working-directory: ./my-scripts/pscale/
         run: |
-          PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ env.PSCALE_PWORD_NAME }}\") ]  | .[0].id "`
+          PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
+          PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
-          if [ "${output}" != null ]; then
-            export EXISTING_PWORD_ID="${PWORD_ID}"
-          fi
+          ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
+          echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-          echo "EXISTING_PWORD_ID=${EXISTING_PWORD_ID}" >> $GITHUB_OUTPUT
+      # PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ]  | .[0].id "`
 
-        # echo "EXISTING_PWORD_ID: ${EXISTING_PWORD_ID}"
+      # if [ "${output}" != null ]; then
+      #   export EXISTING_PWORD_ID="${PWORD_ID}"
+      # fi
+
+      # echo "EXISTING_PWORD_ID=${EXISTING_PWORD_ID}" >> $GITHUB_OUTPUT
+
+      # echo "EXISTING_PWORD_ID: ${EXISTING_PWORD_ID}"
 
       # can possibly move this to job: prep
       # only check cache if an existing pscale password exists
@@ -121,7 +150,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./branch-conn-string.txt
-          key: ${{ env.PSCALE_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+          key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
           lookup-only: true
 
       # if cache hit, download cached pscale branch conn string file for use in succeeding steps or jobs
@@ -130,16 +159,18 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./branch-conn-string.txt
-          key: ${{ env.PSCALE_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+          key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
 
       - name: Delete Branch Password if exists
         if: steps.check_cache_pword.outputs.cache-hit != 'true' || steps.existing_pword.outputs.EXISTING_PWORD_ID == ''
         working-directory: ./my-scripts/pscale
         shell: bash
         run: |
+          export PSCALE_PWORD_NAME=${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
+
           . ./delete-branch-password.sh
 
-          delete-branch-password ${PSCALE_DB_NAME} ${PSCALE_BRANCH_NAME} ${PSCALE_ORG_NAME} pr-31-admin
+          delete-branch-password ${PSCALE_DB_NAME} ${PSCALE_BRANCH_NAME} ${PSCALE_ORG_NAME} ${PSCALE_PWORD_NAME}
 
       - name: Create Branch Password
         if: steps.check_cache_pword.outputs.cache-hit != 'true' || steps.existing_pword.outputs.EXISTING_PWORD_ID == ''
@@ -148,8 +179,8 @@ jobs:
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
-          branch_name: ${{ env.PSCALE_BRANCH_NAME }}
-          name: ${{ env.PSCALE_PWORD_NAME }}
+          branch_name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
+          name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}
 
       - name: Get Created Branch Credentials
         id: credentials
@@ -162,16 +193,22 @@ jobs:
         run: |
           echo "mysql://${USERNAME}:${PASSWORD}@${HOSTNAME}/${PSCALE_DB_NAME}?sslaccept=strict" | tee -a "branch-conn-string.txt"
 
-          CREATED_PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ env.PSCALE_PWORD_NAME }}\") ]  | .[0].id "`
+          PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
+          PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
-          echo "CREATED_PWORD_ID=${CREATED_PWORD_ID}" >> $GITHUB_OUTPUT
+          ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
+          echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-          echo "check here---------------------------------"
-          if [ ${{ steps.create_pword.outputs.password }} != '' ]; then
-            echo "password: ${{ steps.create_pword.outputs.password }}"
-          fi
-          echo "password: ${{ steps.create_pword.outputs.password }}"
-          echo "-------------------------------------------"
+        # CREATED_PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ]  | .[0].id "`
+
+        # echo "CREATED_PWORD_ID=${CREATED_PWORD_ID}" >> $GITHUB_OUTPUT
+
+        # echo "check here---------------------------------"
+        # if [ ${{ steps.create_pword.outputs.password }} != '' ]; then
+        #   echo "password: ${{ steps.create_pword.outputs.password }}"
+        # fi
+        # echo "password: ${{ steps.create_pword.outputs.password }}"
+        # echo "-------------------------------------------"
 
         # "tee -a" appends value to multiple files
         # cannot set secret as output as github actions will mask it with ****
@@ -193,7 +230,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./branch-conn-string.txt
-          key: ${{ env.PSCALE_PWORD_NAME }}-${{ steps.credentials.outputs.CREATED_PWORD_ID }}
+          key: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}-${{ steps.credentials.outputs.EXISTING_PWORD_ID }}
 
       # get branch conn string from cached file for use in succeeding steps
       - name: Output Database Url from Branch connection string
@@ -203,12 +240,13 @@ jobs:
 
           echo "DATABASE_URL=${DATABASE_URL}" >> ${GITHUB_OUTPUT}
 
+      # used for checking conn string if coincides with pscale value
       # no need to implement artifacts to store branch conn string
-      # - name: Upload Branch Connection String
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ${{ env.PSCALE_PWORD_NAME }}
-      #     path: ./branch-conn-string.txt
+      - name: Upload Branch Connection String
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}
+          path: ./branch-conn-string.txt
 
   # Deploy Deploy Request
   deploy-dr:
