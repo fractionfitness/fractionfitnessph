@@ -18,7 +18,7 @@ on:
         closed,
       ]
   push:
-    branches: [test-workflows]
+    branches: [test-workflows, test-*-workflows]
 
 env:
   GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
