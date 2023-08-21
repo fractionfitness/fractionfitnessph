@@ -40,14 +40,28 @@ jobs:
   pushed-commits-to-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Check github context webhook payloads
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check DB changes since last Push to opened Pull Request
         run: |
-          echo "pull_request ${{ github.event.pull_request }}"
-          echo "event ${{ github.event }}"
-          echo "1 ${{ github.event.after }}"
-          echo "2 ${{ github.event.before }}"
-          echo "3 ${GITHUB_EVENT_PATH}"
-          cat ${GITHUB_EVENT_PATH}
+          COMMIT_AFTER_PUSH=${{ github.event.after }}
+          COMMIT_PRIOR_PUSH=${{ github.event.before }}
+
+          DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$")
+
+          if [ DB_CHANGES != 'null' ]; then
+            DB_CHANGED_SINCE_LAST_PUSH='true'
+          else
+            DB_CHANGED_SINCE_LAST_PUSH='false'
+          fi
+
+          echo "DB_CHANGED_SINCE_LAST_PUSH: ${DB_CHANGED_SINCE_LAST_PUSH}"
+          echo "DB_CHANGED_SINCE_LAST_PUSH=${DB_CHANGED_SINCE_LAST_PUSH}" >> "${GITHUB_OUTPUT}"
+
+        # echo "pull_request ${{ github.event.pull_request }}"
+        # echo "event ${{ github.event }}"
 
 #   upload-scripts:
 #     environment: preview
