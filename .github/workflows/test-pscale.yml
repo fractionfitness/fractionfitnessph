@@ -52,12 +52,12 @@ jobs:
           COMMIT_AFTER_PUSH=${{ github.event.after }}
           COMMIT_PRIOR_PUSH=${{ github.event.before }}
 
-          DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$")
+          DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$" || true)
 
-          if [ DB_CHANGES != 'null' ]; then
-            DB_CHANGED_SINCE_LAST_PUSH='true'
+          if [ DB_CHANGES != '' ]; then
+            DB_CHANGED_SINCE_LAST_PUSH=true
           else
-            DB_CHANGED_SINCE_LAST_PUSH='false'
+            DB_CHANGED_SINCE_LAST_PUSH=false
           fi
 
           echo "DB_CHANGED_SINCE_LAST_PUSH: ${DB_CHANGED_SINCE_LAST_PUSH}"
