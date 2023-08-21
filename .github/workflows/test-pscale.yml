@@ -32,7 +32,11 @@ jobs:
   # chmod
   # upload artifacts
 
-  # change this to prep: upload scripts, check if w/ db changes
+  # change this to prep: upload scripts, check if w/ db changes, check if branch password & cache exists
+
+  # probably can use cache instead of scripts but how can you check if there are changes to these files > check changed files if any script is included
+  #  may not be worth it to use cache since not that many files
+
   upload-scripts:
     environment: preview
     runs-on: ubuntu-latest
@@ -89,7 +93,7 @@ jobs:
       #  different github branch name based on event (push vs. pull_request)
       # Pscale Branch Name is based on Github Branch Name and PR ref number
       - name: Get Pscale Branch Name
-        id: branch-name
+        id: branch_name
         working-directory: ./my-scripts/pscale/
         shell: bash
         run: |
@@ -112,10 +116,12 @@ jobs:
         with:
           org_name: ${{ env.PSCALE_ORG_NAME}}
           database_name: ${{ env.PSCALE_DB_NAME}}
-          branch_name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}
+          branch_name: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}
           from: ${{ env.PSCALE_SRC_BRANCH }}
           wait: true
           check_exists: true
+
+      # CONTINUE: insert Create Deploy Request here or in a separate job after creating branch and password
 
       # step (Delete Branch Password) needs this
       - name: Planetscale Setup
@@ -127,14 +133,14 @@ jobs:
         shell: bash
         working-directory: ./my-scripts/pscale/
         run: |
-          PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
           PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
           ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
 
           echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-      # PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ] | .[0].id "`
+      # PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ] | .[0].id "`
 
       # if [ "${output}" != 'null' ]; then
       #   export EXISTING_PWORD_ID="${PWORD_ID}"
@@ -171,7 +177,7 @@ jobs:
         run: |
           echo "pword id: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}"
           export PSCALE_PWORD_NAME=${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
-          export PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}
+          export PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}
 
           . ./delete-branch-password.sh
 
@@ -185,8 +191,8 @@ jobs:
         with:
           org_name: ${{ env.PSCALE_ORG_NAME }}
           database_name: ${{ env.PSCALE_DB_NAME }}
-          branch_name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
-          name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}
+          branch_name: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+          name: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}
 
       # if: steps.check_cache_pword.outputs.cache-hit != 'true'
       - name: Get Created Branch Credentials
@@ -201,14 +207,14 @@ jobs:
         run: |
           echo "mysql://${USERNAME}:${PASSWORD}@${HOSTNAME}/${PSCALE_DB_NAME}?sslaccept=strict" | tee -a "../../branch-conn-string.txt"
 
-          PSCALE_BRANCH_NAME=${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }}
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
           PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
           ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
 
           echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-        # CREATED_PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ]  | .[0].id "`
+        # CREATED_PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ]  | .[0].id "`
 
         # echo "CREATED_PWORD_ID=${CREATED_PWORD_ID}" >> $GITHUB_OUTPUT
 
@@ -254,8 +260,62 @@ jobs:
       - name: Upload Branch Connection String
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.branch-name.outputs.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
+          name: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
           path: ./branch-conn-string.txt
+
+      - name: Check if Open Deploy Request exists for Branch
+        id: existing_dr
+        working-directory: ./my-scripts/pscale/
+        env:
+          PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}
+        run: |
+          ./check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_BRANCH_NAME}" "${PSCALE_ORG_NAME}"
+
+          echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+
+      # only runs when no existing DR OR if it exists, its state='closed'
+      - name: Create Deploy Request
+        if: steps.existing_dr.outputs.DR_EXISTS == 'false' || steps.existing_dr.outputs.DR_STATE == 'closed'
+        id: create_dr
+        uses: planetscale/create-deploy-request-action@v2
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          branch_name: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+          deploy_to: ${{ env.PSCALE_SRC_BRANCH }}
+
+      - name: Get Current Deploy Request Number
+        id: deploy_request
+        run: |
+          EXISTING_DR_NUMBER=${{ steps.existing_dr.outputs.DR_NUMBER }}
+          EXISTING_DR_STATE=${{ steps.existing_dr.outputs.DR_STATE }}
+          CREATED_DR_NUMBER=${{ steps.create_dr.outputs.number }}
+
+          echo "tests---------------------------------------------------"
+          echo "EXISTING_DR_NUMBER: ${EXISTING_DR_NUMBER}"
+          echo "EXISTING_DR_STATE: ${EXISTING_DR_STATE}"
+
+          echo "CREATED_DR_NUMBER: ${CREATED_DR_NUMBER}"
+          echo "tests---------------------------------------------------"
+
+          if [ -n "${CREATED_DR_NUMBER}" ]; then
+            echo "DR_NUMBER: ${CREATED_DR_NUMBER}"
+          elif [[ -n "${EXISTING_DR_NUMBER}" && "${EXISTING_DR_STATE}" == "open" ]]; then
+            echo "DR_NUMBER: ${EXISTING_DR_NUMBER}"
+          else
+            echo "Error: No Deploy Request found or created for the Planetscale Branch."
+            exit 1
+          fi
+
+        # alternative condition check: if DR exists and state='open'
+        # if [ -n $EXISTING_DR_NUMBER && EXISTING_DR_STATE == 'open' ]; then
+        #   echo "DR_NUMBER: ${{ steps.existing_dr.outputs.DR_NUMBER }}"
+        # else
+        #   echo "DR_NUMBER: ${{ steps.create_dr.outputs.number }}"
+        # fi
+
+        # alternative to double bracket conditional
+        # elif [ -n "${EXISTING_DR_NUMBER}" -a "${EXISTING_DR_STATE}" == "open" ]; then
 
   # Deploy Deploy Request
   deploy-dr:
