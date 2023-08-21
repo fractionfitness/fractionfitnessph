@@ -69,6 +69,12 @@ jobs:
       # fatal: bad object
       # this will not error out (exit=0)
       # DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$")
+
+      - name: Check if there was a Force Push to the Branch
+        if: steps.db_changes_on_push.outcome == 'failure'
+        run: |
+          echo "A force push was performed on the Pull Request Head Branch: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}."
+
       - name: Check Outputs on db_changes_on_push
         if: steps.db_changes_on_push.outcome == 'success'
 
