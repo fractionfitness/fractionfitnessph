@@ -44,7 +44,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Check DB changes since last Push to opened Pull Request
+        continue-on-error: true
+        id: db_changes_on_push
         run: |
           COMMIT_AFTER_PUSH=${{ github.event.after }}
           COMMIT_PRIOR_PUSH=${{ github.event.before }}
@@ -59,6 +62,9 @@ jobs:
 
           echo "DB_CHANGED_SINCE_LAST_PUSH: ${DB_CHANGED_SINCE_LAST_PUSH}"
           echo "DB_CHANGED_SINCE_LAST_PUSH=${DB_CHANGED_SINCE_LAST_PUSH}" >> "${GITHUB_OUTPUT}"
+      - name: das
+        run: |
+          echo "check: ${{ steps.db_changes_on_push.outputs.DB_CHANGED_SINCE_LAST_PUSH }}"
 
         # echo "pull_request ${{ github.event.pull_request }}"
         # echo "event ${{ github.event }}"
