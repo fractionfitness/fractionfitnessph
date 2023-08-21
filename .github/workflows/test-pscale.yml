@@ -37,7 +37,9 @@ jobs:
   # probably can use cache instead of scripts but how can you check if there are changes to these files > check changed files if any script is included
   #  may not be worth it to use cache since not that many files
 
-  pushed-commits-to-pr:
+  # db changes, deploy request creation and approval resolution
+  # rename this
+  commits-pushed-on-pr:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -45,29 +47,44 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check DB changes since last Push to opened Pull Request
+      - name: Check DB changes since last Push on opened Pull Request
         continue-on-error: true
         id: db_changes_on_push
         run: |
           COMMIT_AFTER_PUSH=${{ github.event.after }}
           COMMIT_PRIOR_PUSH=${{ github.event.before }}
 
-          DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$" || true)
+          DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$")
 
-          if [ DB_CHANGES != '' ]; then
-            DB_CHANGED_SINCE_LAST_PUSH=true
+          if [ "$DB_CHANGES" != "" ]; then
+            DB_CHANGES_SINCE_LAST_PUSH=true
           else
-            DB_CHANGED_SINCE_LAST_PUSH=false
+            DB_CHANGES_SINCE_LAST_PUSH=false
           fi
 
-          echo "DB_CHANGED_SINCE_LAST_PUSH: ${DB_CHANGED_SINCE_LAST_PUSH}"
-          echo "DB_CHANGED_SINCE_LAST_PUSH=${DB_CHANGED_SINCE_LAST_PUSH}" >> "${GITHUB_OUTPUT}"
-      - name: das
+          echo "DB_CHANGES_SINCE_LAST_PUSH: ${DB_CHANGES_SINCE_LAST_PUSH}"
+          echo "DB_CHANGES_SINCE_LAST_PUSH=${DB_CHANGES_SINCE_LAST_PUSH}" >> "${GITHUB_OUTPUT}"
+
+      # we want this step to error out (exit=1) if there are force pushes to the PR head branch, resulting in the error:
+      # fatal: bad object
+      # this will not error out (exit=0)
+      # DB_CHANGES=$(eval "git diff --name-only --diff-filter=ACMRT $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH | grep -w schema.prisma$")
+      - name: Check Outputs on db_changes_on_push
+        if: steps.db_changes_on_push.outcome == 'success'
+
         run: |
-          echo "check: ${{ steps.db_changes_on_push.outputs.DB_CHANGED_SINCE_LAST_PUSH }}"
+          echo "DB_CHANGES_SINCE_LAST_PUSH: ${{ steps.db_changes_on_push.outputs.DB_CHANGES_SINCE_LAST_PUSH }}"
 
         # echo "pull_request ${{ github.event.pull_request }}"
         # echo "event ${{ github.event }}"
+
+      # if db_changes_on_push step failed, a force push was performed and we will assume that there were db changes after the force push
+      # therefore, we need to close and open a new deploy request to make sure no unreviewed/unapproved db changes are deployed, if the prior deploy request was already approved
+      - name: Close and Create new DR
+        if: steps.db_changes_on_push.outcome == 'failure' || steps.db_changes_on_push.outputs.DB_CHANGES_SINCE_LAST_PUSH == 'true'
+        run: |
+          echo "closing current Deploy Request"
+          echo "creating new Deploy Request"
 
 #   upload-scripts:
 #     environment: preview
