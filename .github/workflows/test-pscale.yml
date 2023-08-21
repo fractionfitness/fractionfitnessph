@@ -44,8 +44,10 @@ jobs:
         run: |
           echo "pull_request ${{ github.event.pull_request }}"
           echo "event ${{ github.event }}"
-          echo "after ${{ github.event.after }}"
-          echo "before ${{ github.event.before }}"
+          echo "1 ${{ github.event.after }}"
+          echo "2 ${{ github.event.before }}"
+          echo "3 ${GITHUB_EVENT_PATH}"
+          cat ${GITHUB_EVENT_PATH}
 
 #   upload-scripts:
 #     environment: preview
