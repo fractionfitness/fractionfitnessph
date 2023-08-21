@@ -201,7 +201,7 @@ model Tester {
   name String
 }
 
-model Tester2 {
+model Tester3 {
   id   Int    @id @default(autoincrement())
   name String
 }
