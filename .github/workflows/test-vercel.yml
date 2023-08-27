@@ -41,7 +41,6 @@ jobs:
             ./my-scripts/
 
       - name: Check DB changes on Opened PR
-        continue-on-error: true
         id: db_changes
         working-directory: ./my-scripts/pscale/
         run: |
