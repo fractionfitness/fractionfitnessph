@@ -40,6 +40,7 @@ jobs:
   # db changes, deploy request creation and approval resolution
   # rename this
   commits-pushed-on-pr:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
