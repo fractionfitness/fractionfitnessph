@@ -31,6 +31,7 @@ jobs:
           chmod -R +x ./.pscale/cli-helper-scripts/
           chmod -R +x ./my-scripts/
       - name: Upload shell scripts as Artifact
+        if: false
         uses: actions/upload-artifact@v3
         with:
           name: scripts
@@ -52,7 +53,7 @@ jobs:
           COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
           COMMIT_ON_BASE=${{ github.event.pull_request.base.sha }}
 
-          ./check-db-changes.sh $COMMIT_ON_HEAD $COMMIT_ON_BASE
+          source ./check-db-changes.sh $COMMIT_ON_HEAD $COMMIT_ON_BASE
 
           echo "DB_CHANGES_ON_PR: ${DB_CHANGES}"
           echo "DB_CHANGES_ON_PR=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
@@ -60,7 +61,7 @@ jobs:
           if [ "$GH_ACTIONS_EVENT_TYPE" == "synchronize" ]; then
             COMMIT_AFTER_PUSH=${{ github.event.after }}
             COMMIT_PRIOR_PUSH=${{ github.event.before }}
-            ./check-db-changes.sh $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH
+            source ./check-db-changes.sh $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH
 
             echo "DB_CHANGES_SINCE_LAST_PUSH: ${DB_CHANGES}"
             echo "DB_CHANGES_SINCE_LAST_PUSH=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
