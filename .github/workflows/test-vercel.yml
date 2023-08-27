@@ -69,7 +69,7 @@ jobs:
           echo "DB_CHANGES_SINCE_LAST_PUSH: ${DB_CHANGES}"
           echo "DB_CHANGES_SINCE_LAST_PUSH=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
 
-      # if db_changes_on_sync is error, it could be that there was no db changes or a force push was performed
+      # if db_changes_on_sync is error, it could be that there were no db changes on pushed commits or a force push was performed | no way to differentiate
 
   pscale-create-branch-pword-dr:
     if: false
