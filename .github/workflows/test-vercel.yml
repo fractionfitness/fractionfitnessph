@@ -39,13 +39,12 @@ jobs:
           path: |
             ./.pscale/cli-helper-scripts/
             ./my-scripts/
-      - name: Check DB changes on Opened PR and PR Synchronize Events
+
+      - name: Check DB changes on Opened PR
         continue-on-error: true
         id: db_changes
-        working-directory: ./my-scripts/pscale
+        working-directory: ./my-scripts/pscale/
         run: |
-          GH_ACTIONS_EVENT_TYPE=${{ github.event.action }}
-
           echo "github.head_ref ${{ github.head_ref }}"
           echo "github.base_ref ${{ github.base_ref }}"
           echo "github.sha ${{ github.sha }}"
@@ -54,18 +53,23 @@ jobs:
           COMMIT_ON_BASE=${{ github.event.pull_request.base.sha }}
 
           source ./check-db-changes.sh $COMMIT_ON_HEAD $COMMIT_ON_BASE
-
           echo "DB_CHANGES_ON_PR: ${DB_CHANGES}"
           echo "DB_CHANGES_ON_PR=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
 
-          if [ "$GH_ACTIONS_EVENT_TYPE" == "synchronize" ]; then
-            COMMIT_AFTER_PUSH=${{ github.event.after }}
-            COMMIT_PRIOR_PUSH=${{ github.event.before }}
-            source ./check-db-changes.sh $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH
+      - name: Check DB changes on PR Synchronize
+        if: ${{ github.event.action }} == 'synchronize'
+        continue-on-error: true
+        id: db_changes_on_sync
+        working-directory: ./my-scripts/pscale/
+        run: |
+          COMMIT_AFTER_PUSH=${{ github.event.after }}
+          COMMIT_PRIOR_PUSH=${{ github.event.before }}
 
-            echo "DB_CHANGES_SINCE_LAST_PUSH: ${DB_CHANGES}"
-            echo "DB_CHANGES_SINCE_LAST_PUSH=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
-          fi
+          source ./check-db-changes.sh $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH
+          echo "DB_CHANGES_SINCE_LAST_PUSH: ${DB_CHANGES}"
+          echo "DB_CHANGES_SINCE_LAST_PUSH=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
+
+      # if db_changes_on_sync is error, it could be that there was no db changes or a force push was performed
 
   pscale-create-branch-pword-dr:
     if: false
