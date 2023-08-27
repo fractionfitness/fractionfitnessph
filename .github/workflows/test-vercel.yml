@@ -64,6 +64,7 @@ jobs:
           COMMIT_AFTER_PUSH=${{ github.event.after }}
           COMMIT_PRIOR_PUSH=${{ github.event.before }}
 
+          echo test
           source ./check-db-changes.sh $COMMIT_AFTER_PUSH $COMMIT_PRIOR_PUSH
           echo "DB_CHANGES_SINCE_LAST_PUSH: ${DB_CHANGES}"
           echo "DB_CHANGES_SINCE_LAST_PUSH=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
