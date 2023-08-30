@@ -29,9 +29,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Make shell scripts executable
-        run: |
-          chmod -R +x ./.pscale/cli-helper-scripts/
-          chmod -R +x ./my-scripts/
+        run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
       - name: Upload shell scripts as Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -73,7 +71,7 @@ jobs:
       # if db_changes_on_sync is error, it could be that there were no db changes on pushed commits or a force push was performed | no way to differentiate
 
   pscale-create-branch-pword-dr:
-    if: false
+    # if: false
     needs: setup
     runs-on: ubuntu-latest
     environment: preview
@@ -84,12 +82,17 @@ jobs:
       PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
       PSCALE_SRC_BRANCH: ${{ vars.PSCALE_SRC_BRANCH }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+    outputs:
+      SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
+      PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
     steps:
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
         with:
           name: scripts
           path: ./
+      - name: Make shell scripts executable
+        run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
 
       #  different github branch name based on event (push vs. pull_request)
       # Pscale Branch Name is based on Github Branch Name and PR ref number
@@ -98,8 +101,6 @@ jobs:
         working-directory: ./my-scripts/pscale/
         shell: bash
         run: |
-          chmod -R +x ./
-
           GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
 
@@ -107,9 +108,20 @@ jobs:
 
           ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
 
-          echo "outputs: PSCALE_BRANCH_NAME"
+          echo "outputs: SHORTENED_GH_BRANCH_NAME / PSCALE_BRANCH_NAME"
 
         # echo "GITHUB_BRANCH_NAME based on push event: ${{ github.event.push.ref}}"
+
+      # step (Delete Branch Password) needs this
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Check if Pscale Branch already created for Github Branch before PR was opened
+        id: branch_exists
+        continue-on-error: true
+        run: pscale branch show $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME
+      - name: Delete Existing Pscale Branch
+        if: steps.branch_exists.outcome == 'success'
+        run: pscale branch delete $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME --force
 
       - name: Create Pscale Branch
         uses: planetscale/create-branch-action@v4
@@ -123,10 +135,6 @@ jobs:
           check_exists: true
 
       # CONTINUE: insert Create Deploy Request here or in a separate job after creating branch and password
-
-      # step (Delete Branch Password) needs this
-      - name: Planetscale Setup
-        uses: planetscale/setup-pscale-action@v1
 
       # can possibly move this to job: prep
       - name: Get Branch Password if exists

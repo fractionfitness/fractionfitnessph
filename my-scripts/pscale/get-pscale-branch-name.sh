@@ -8,35 +8,65 @@ GITHUB_PR_NUMBER=$2
 
 # check if GITHUB_BRANCH_NAME has a corresponding Issue Ref Number
 NUMERIC_REGEX='^[0-9]+$'
+SEMVER_REGEX='^[0-9]*\.[0-9]{1,2}\.[0-9]{1,2}'
+
+BRANCH_TYPE=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{print $1}')
 REF_NUM=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{print $2}')
 
-# check if it is a number and not 'noref'
-# do not enclose NUMERIC_REGEX in "" because it will treat the regex as a string
-if [[ "${REF_NUM}" =~ ${NUMERIC_REGEX} ]]; then
-  # echo "REF_NUM: $REF_NUM"
+if [ $BRANCH_TYPE == "staging" ]; then
+  # it is a staging branch with the naming convention: "staging-semver"
+  echo "staging branch"
+  if [[ "${REF_NUM}" =~ ${SEMVER_REGEX} ]]; then
 
-  # only gets first_word-refnum
-  SHORTENED_GH_BRANCH_NAME=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{printf "%s-%s", $1, $2;}')
-  echo "${SHORTENED_GH_BRANCH_NAME}"
+  # only gets staging-semver
+    SHORTENED_GH_BRANCH_NAME=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{printf "%s-%s", $1, $2;}')
 
-  if [ -z "${PR_NUMBER}" ]; then
-    export PSCALE_BRANCH_NAME="${SHORTENED_GH_BRANCH_NAME}"
   else
-    export PSCALE_BRANCH_NAME="${SHORTENED_GH_BRANCH_NAME}-pr-${PR_NUMBER}"
+    echo "REF_NUM: $REF_NUM"
+
+    echo -e "Error: Github Staging Branch Name must use a valid SemVer Number: XXX.XX.XX. \
+    \nRename the Github Branch, using the following pattern: \
+    \n<staging>-semver_num (e.g. staging-1.0.0-mvp)" 2>&1;
+    exit 1
   fi
 
-  echo "PSCALE_BRANCH_NAME: ${PSCALE_BRANCH_NAME}"
-  echo "PSCALE_BRANCH_NAME=${PSCALE_BRANCH_NAME}" >> "${GITHUB_OUTPUT}"
-
 else
-  echo "REF_NUM: $REF_NUM"
+  # it is a feat branch with the naming convention "feat-issueref-description"
+  echo "feat branch"
 
-  echo -e "Error: Github Branch Name must correspond to a Github Issue Reference Number. \
-  \nPlease create an Issue and connect it to your Github Branch. \
-  \nThen, rename the Github Branch, using the following pattern: \
-  \n<feat|staging|fix|refactor|cicd|chore>-refnum-description" 2>&1;
-  exit 1
+  # check if it is a number and not 'noref'
+  # do not enclose NUMERIC_REGEX in "" because it will treat the regex as a string
+  if [[ "${REF_NUM}" =~ ${NUMERIC_REGEX} ]]; then
+    # echo "REF_NUM: $REF_NUM"
+
+    # only gets first_word-issue_num
+    SHORTENED_GH_BRANCH_NAME=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{printf "%s-%s", $1, $2;}')
+
+  else
+    echo "REF_NUM: $REF_NUM"
+
+    echo -e "Error: Github Feature Branch Name must correspond to a Github Issue Reference Number. \
+    \nPlease create an Issue and connect it to your Github Branch. \
+    \nThen, rename the Github Branch, using the following pattern: \
+    \n<feat | fix | refactor | cicd | chore>-issue_num-description (e.g. feat-1-add-dashboard)" 2>&1;
+    exit 1
+  fi
+
 fi
+
+if [ -z "${GITHUB_PR_NUMBER}" ]; then
+  export PSCALE_BRANCH_NAME="${SHORTENED_GH_BRANCH_NAME}"
+else
+  export PSCALE_BRANCH_NAME="${SHORTENED_GH_BRANCH_NAME}-pr-${GITHUB_PR_NUMBER}"
+fi
+
+echo "PSCALE_BRANCH_NAME: ${PSCALE_BRANCH_NAME}"
+echo "SHORTENED_GH_BRANCH_NAME: ${SHORTENED_GH_BRANCH_NAME}"
+echo "SHORTENED_GH_BRANCH_NAME=${SHORTENED_GH_BRANCH_NAME}" >> "${GITHUB_OUTPUT}"
+echo "PSCALE_BRANCH_NAME=${PSCALE_BRANCH_NAME}" >> "${GITHUB_OUTPUT}"
+
+
+
 
 
 
@@ -79,7 +109,6 @@ fi
 #     echo "$SECRET_TEXT"
 #     echo "::set-output name=CONNECTION_STRING_LINK::${link}"
 # fi
-
 
 # echo "Alternatively, you can connect to your new branch like this:"
 # echo "pscale shell \"$DB_NAME\" \"$BRANCH_NAME\" --org \"$ORG_NAME\""
