@@ -145,10 +145,9 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.$transaction([
-    ...createUsersAndProfilesArray,
-    ...createGroupsAndProfilesArray,
-  ]);
+  await prisma.$transaction([...createUsersAndProfilesArray]);
+
+  await prisma.$transaction([...createGroupsAndProfilesArray]);
 
   await prisma.$transaction([createGroupRelations, createSessions]);
 
