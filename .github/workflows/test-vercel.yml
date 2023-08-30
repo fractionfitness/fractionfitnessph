@@ -26,6 +26,7 @@ jobs:
     environment: preview
     outputs:
       DB_CHANGES: ${{ steps.db_changes.outputs.DB_CHANGES }}
+      GITHUB_BRANCH_NAME: ${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -41,9 +42,12 @@ jobs:
           path: |
             ./.pscale/cli-helper-scripts/
             ./my-scripts/
-
+      - name: Get Github Branch Name
+        id: gh_branch
+        run: echo "GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "${GITHUB_OUTPUT}"
       - name: Check DB changes on Opened PR (Head vs. Base)
-        continue-on-error: true
+        # continue-on-error: true
+        if: github.event_name == 'pull_request'
         id: db_changes
         working-directory: ./my-scripts/pscale/
         run: |
@@ -352,6 +356,7 @@ jobs:
       PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
+      GITHUB_BRANCH_NAME: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -448,16 +453,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: '**/package-lock.json'
-      # - name: Cache dependencies needed for Prisma DB push and Seed/Reset
-      #   if: needs.setup.outputs.DB_CHANGES == 'true'
-      #   id: cache_deps
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: |
-      #       ./node_modules
-      #     key: devDeps-node-modules-${{ hashFiles('package-lock.json') }}
+      - name: Cache dependencies needed for Prisma DB push and Seed/Reset
+        if: needs.setup.outputs.DB_CHANGES == 'true'
+        id: cache_deps
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./node_modules
+          key: devDeps-node-modules-${{ hashFiles('package-lock.json') }}
       - name: Install dependencies needed for Prisma DB push and Seed/Reset
-        # if: steps.cache_deps.outputs.cache-hit != 'true'
+        if: steps.cache_deps.outputs.cache-hit != 'true'
         run: |
           npm install -D prisma ts-node tsconfig-paths
       - name: Prisma DB Push & DB Seed/Reset
@@ -468,19 +473,19 @@ jobs:
 
       - name: Vercel CLI Setup
         run: |
-          ls -al ./node_modules
-          echo "--------------------------------------------------"
           ls -al
+          echo "--------------------------------------------------"
           npm install --global vercel@latest
+          vercel pull --yes --environment ${{ env.VERCEL_ENV }} --token ${{ secrets.VERCEL_TOKEN }}
 
-        # vercel link --cwd "." --token ${{ secrets.VERCEL_TOKEN }} --yes
+        # vercel link  --yes --cwd "." --token ${{ secrets.VERCEL_TOKEN }}
 
       - name: Delete DATABASE_URL from Vercel's Environment Variables for Github Branch
         continue-on-error: true
-        run: vercel env rm --yes DATABASE_URL ${{ env.VERCEL_ENV }} ${{ steps.gh_branch_name.outputs.GITHUB_BRANCH_NAME }} --token ${{ secrets.VERCEL_TOKEN }}
+        run: vercel env rm --yes DATABASE_URL ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME --token ${{ secrets.VERCEL_TOKEN }}
 
       - name: Add DATABASE_URL to Vercel's Env Vars for the Github Branch
-        run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} ${{ steps.gh_branch_name.outputs.GITHUB_BRANCH_NAME }} --token ${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
+        run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME --token ${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
 
       - name: Vercel Deploy Github Branch
         run: vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
