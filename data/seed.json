@@ -18,7 +18,12 @@
       "unhashedPassword": "yiloy",
       "password": "$2b$12$6sNt9xwv2Xjy.bIhUUCJkuSsymWJymALTA0ieeKb9RJu1Xrk.dBCK"
     },
-    { "id": 4, "email": "Gladys_Emmerich@yahoo.com" },
+    {
+      "id": 4,
+      "email": "Gladys_Emmerich@yahoo.com",
+      "unhashedPassword": "pwordly",
+      "password": "$2b$12$RDgHMd.6wlr9bRJHl7VwpeAZ7d.yCU/6LnyAJhVmr.SS1WfE3VCUi"
+    },
     {
       "id": 5,
       "email": "Leon.Leuschke20@gmail.com",
