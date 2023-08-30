@@ -486,4 +486,9 @@ jobs:
         run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME --token ${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
 
       - name: Vercel Deploy Github Branch
-        run: VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+        run: |
+          echo "NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: ${NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF}"
+          echo "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: ${NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA}"
+          echo "VERCEL_GIT_COMMIT_REF: ${VERCEL_GIT_COMMIT_REF}"
+          echo "VERCEL_GIT_COMMIT_SHA: ${VERCEL_GIT_COMMIT_SHA}"
+          vercel deploy -b NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" -b VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
