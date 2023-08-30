@@ -473,8 +473,6 @@ jobs:
 
       - name: Vercel CLI Setup
         run: |
-          ls -al
-          echo "--------------------------------------------------"
           npm install --global vercel@latest
           vercel pull --yes --environment ${{ env.VERCEL_ENV }} --token ${{ secrets.VERCEL_TOKEN }}
 
@@ -488,4 +486,4 @@ jobs:
         run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME --token ${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
 
       - name: Vercel Deploy Github Branch
-        run: vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+        run: VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
