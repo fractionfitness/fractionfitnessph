@@ -77,9 +77,9 @@ jobs:
 
       # if db_changes_on_sync is error, it could be that there were no db changes on pushed commits or a force push was performed | no way to differentiate
 
+    # if: false
   pscale-create-branch-pword-dr:
     if: needs.setup.outputs.DB_CHANGES == 'true'
-    # if: false
     needs: setup
     runs-on: ubuntu-latest
     environment: preview
@@ -426,7 +426,8 @@ jobs:
       # only for testing vercel-deploy job
       # if: needs.setup.outputs.DB_CHANGES == 'true'
       - name: Restore Cache Branch Password
-        # this is the correct conditional:
+        # this is the better conditional, since we want to check if pscale pword was either created & cached or there's a pword cache hit
+        # if pscale-create-branch-pword-dr was skipped/cancelled/failure then its impossible to have cached pscale pword
         if: needs.pscale-create-branch-pword-dr.result == 'success'
         id: check_cache_pword
         uses: actions/cache/restore@v3
@@ -435,17 +436,18 @@ jobs:
           key: ${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_NAME }}-${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_ID }}
 
       # key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
-
       # - name: Read Branch Connection String
       #   run: |
       #     cat ./branch-conn-string.txt
-
       # Warning: this will save the value in bash history, so this is not recommend for secrets.
       # if there are no DB changes, save the credentials for ffph_dev main branch into branch-conn-string.txt | cache key: dev-admin-pwordid
+      # alternate conditional
+      # if: needs.pscale-create-branch-pword-dr.result == 'skipped'
       - name: Get Github dev environment's DATABASE_URL
         if: needs.setup.outputs.DB_CHANGES != 'true'
         run: echo ${{ secrets.DEV_DATABASE_URL }} >> "./branch-conn-string.txt"
 
+        # if: false
       - name: Install NodeJS
         if: needs.setup.outputs.DB_CHANGES == 'true'
         uses: actions/setup-node@v3
@@ -453,6 +455,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: '**/package-lock.json'
+
+        # if: false
       - name: Cache dependencies needed for Prisma DB push and Seed/Reset
         if: needs.setup.outputs.DB_CHANGES == 'true'
         id: cache_deps
@@ -461,10 +465,14 @@ jobs:
           path: |
             ./node_modules
           key: devDeps-node-modules-${{ hashFiles('package-lock.json') }}
+
+        # if: false
       - name: Install dependencies needed for Prisma DB push and Seed/Reset
         if: steps.cache_deps.outputs.cache-hit != 'true'
         run: |
           npm install -D prisma ts-node tsconfig-paths
+
+        # if: false
       - name: Prisma DB Push & DB Seed/Reset
         if: needs.setup.outputs.DB_CHANGES == 'true'
         run: |
@@ -476,7 +484,7 @@ jobs:
           npm install --global vercel@latest
           vercel pull --yes --environment ${{ env.VERCEL_ENV }} --token ${{ secrets.VERCEL_TOKEN }}
 
-        # vercel link  --yes --cwd "." --token ${{ secrets.VERCEL_TOKEN }}
+        # vercel link --yes --cwd "." --token ${{ secrets.VERCEL_TOKEN }}
 
       - name: Delete DATABASE_URL from Vercel's Environment Variables for Github Branch
         continue-on-error: true
@@ -487,8 +495,18 @@ jobs:
 
       - name: Vercel Deploy Github Branch
         run: |
-          echo "NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: ${NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF}"
-          echo "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: ${NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA}"
-          echo "VERCEL_GIT_COMMIT_REF: ${VERCEL_GIT_COMMIT_REF}"
-          echo "VERCEL_GIT_COMMIT_SHA: ${VERCEL_GIT_COMMIT_SHA}"
-          vercel deploy -b NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" -b VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+          echo "git branch:  $(git branch)"
+          git switch -c "$GITHUB_BRANCH_NAME"
+          echo "git branch:  $(git branch)"
+          vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+
+        # must use vercel build
+        # but how to set NEXTAUTH_URL=https://{VERCEL_URL} when the VERCEL_URL is only available during deployment
+        # must use vercel deploy --prebuilt
+
+        # vercel deploy -b NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" -b VERCEL_GIT_COMMIT_REF="$GITHUB_BRANCH_NAME" --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+        # vercel link --yes --cwd "." --token ${{ secrets.VERCEL_TOKEN }}
+        # echo "NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: ${NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF}"
+        # echo "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: ${NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA}"
+        # echo "VERCEL_GIT_COMMIT_REF: ${VERCEL_GIT_COMMIT_REF}"
+        # echo "VERCEL_GIT_COMMIT_SHA: ${VERCEL_GIT_COMMIT_SHA}"
