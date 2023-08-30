@@ -17,6 +17,9 @@ on:
         closed,
       ]
 
+env:
+  NODE_VERSION: 18.13.0
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -71,6 +74,7 @@ jobs:
       # if db_changes_on_sync is error, it could be that there were no db changes on pushed commits or a force push was performed | no way to differentiate
 
   pscale-create-branch-pword-dr:
+    if: needs.setup.outputs.DB_CHANGES == 'true'
     # if: false
     needs: setup
     runs-on: ubuntu-latest
@@ -85,6 +89,8 @@ jobs:
     outputs:
       SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
       PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+      EXISTING_PWORD_ID: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+      EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
     steps:
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
@@ -94,7 +100,7 @@ jobs:
       - name: Make shell scripts executable
         run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
 
-      #  different github branch name based on event (push vs. pull_request)
+      # different github branch name based on event (push vs. pull_request)
       # Pscale Branch Name is based on Github Branch Name and PR ref number
       - name: Get Pscale Branch Name
         id: branch_name
@@ -119,6 +125,15 @@ jobs:
         id: branch_exists
         continue-on-error: true
         run: pscale branch show $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME
+
+        # why doesn't this work? need to place inside of shell script? see create-branch-action for reference: https://github.com/planetscale/create-branch-action/blob/main/entrypoint.sh
+        # run: |
+        #   output=$(eval "pscale branch show $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME" 2>&1)
+        #   exit_status=$?
+        #   if [ $exit_status -ne 0 ]; then
+        #     echo "Pscale branch doesn't exist"
+        #   fi
+        #   echo "existing Pscale branch: ${output}"
       - name: Delete Existing Pscale Branch
         if: steps.branch_exists.outcome == 'success'
         run: pscale branch delete $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME --force
@@ -327,24 +342,27 @@ jobs:
         # elif [ -n "${EXISTING_DR_NUMBER}" -a "${EXISTING_DR_STATE}" == "open" ]; then
 
   vercel-deploy:
-    if: false
-    needs: pscale-create-branch-pword-dr
+    if: always()
+    needs: [setup, pscale-create-branch-pword-dr]
     environment: preview
     env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download scripts artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: scripts
-          path: ./
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      # - name: Download scripts artifact
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: scripts
+      #     path: ./
       - name: Make shell scripts executable
-        run: |
-          chmod -R +x ./.pscale/cli-helper-scripts/
-          chmod -R +x ./my-scripts/
+        run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
 
@@ -361,25 +379,18 @@ jobs:
       #     echo "DB_CHANGES_ON_PR: ${DB_CHANGES}"
       #     echo "DB_CHANGES_ON_PR=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
 
-      - name: Install Prisma & Reset DB
-        if: steps.db_changes.outputs.DB_CHANGES_ON_PR == 'true'
-        run: |
-          npm install prisma
-          npm run db:reset
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+      # - name: Get Github Branch Name
+      #   id: gh_branch_name
+      #   run: |
+      #     echo "GITHUB_BRANCH_NAME based on ref: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+      #     echo "GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "${GITHUB_OUTPUT}"
 
-      - name: Get Github Branch Name
-        id: gh_branch_name
-        run: |
-          echo "GITHUB_BRANCH_NAME based on ref: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          echo "GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "${GITHUB_OUTPUT}"
-
+      # different github branch name based on event (push vs. pull_request)
+      # Pscale Branch Name is based on Github Branch Name and PR ref number
       # - name: Get Pscale Branch Name
-      #   if: steps.db_changes.outputs.DB_CHANGES_ON_PR == 'true'
+      #   if: needs.setup.outputs.DB_CHANGES == 'true'
       #   id: branch_name
       #   working-directory: ./my-scripts/pscale/
-      #   shell: bash
       #   run: |
       #     GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
       #     GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
@@ -388,28 +399,37 @@ jobs:
 
       #     ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
 
-      #     echo "outputs: PSCALE_BRANCH_NAME"
+      #     echo "outputs: SHORTENED_GH_BRANCH_NAME / PSCALE_BRANCH_NAME"
+
+      # echo "GITHUB_BRANCH_NAME based on push event: ${{ github.event.push.ref}}"
 
       # - name: Get Branch Password if exists
-      #   if: steps.db_changes.outputs.DB_CHANGES_ON_PR == 'true'
+      #   if: needs.setup.outputs.DB_CHANGES == 'true'
       #   id: existing_pword
       #   shell: bash
       #   working-directory: ./my-scripts/pscale/
       #   run: |
-      #     PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+      #     PSCALE_BRANCH_NAME=${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
       #     PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
       #     ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
 
       #     echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-      # - name: Restore Cache Branch Password
-      #   if: steps.existing_pword.outcome == 'success'
-      #   id: check_cache_pword
-      #   uses: actions/cache/restore@v3
-      #   with:
-      #     path: ./branch-conn-string.txt
-      #     key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+      # if: steps.existing_pword.outcome == 'success'
+
+      # only for testing vercel-deploy job
+      # if: needs.setup.outputs.DB_CHANGES == 'true'
+      - name: Restore Cache Branch Password
+        # this is the correct conditional:
+        if: needs.pscale-create-branch-pword-dr.result == 'success'
+        id: check_cache_pword
+        uses: actions/cache/restore@v3
+        with:
+          path: ./branch-conn-string.txt
+          key: ${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_NAME }}-${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_ID }}
+
+      # key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
 
       # - name: Read Branch Connection String
       #   run: |
@@ -417,16 +437,50 @@ jobs:
 
       # Warning: this will save the value in bash history, so this is not recommend for secrets.
       # if there are no DB changes, save the credentials for ffph_dev main branch into branch-conn-string.txt | cache key: dev-admin-pwordid
-      - name: Use Github dev environment's DATABASE_URL and add to Vercel's Env Vars for the Github Branch
-        if: steps.db_changes.outputs.DB_CHANGES_ON_PR == 'false'
+      - name: Get Github dev environment's DATABASE_URL
+        if: needs.setup.outputs.DB_CHANGES != 'true'
         run: echo ${{ secrets.DEV_DATABASE_URL }} >> "./branch-conn-string.txt"
+
+      - name: Install NodeJS
+        if: needs.setup.outputs.DB_CHANGES == 'true'
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      # - name: Cache dependencies needed for Prisma DB push and Seed/Reset
+      #   if: needs.setup.outputs.DB_CHANGES == 'true'
+      #   id: cache_deps
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ./node_modules
+      #     key: devDeps-node-modules-${{ hashFiles('package-lock.json') }}
+      - name: Install dependencies needed for Prisma DB push and Seed/Reset
+        # if: steps.cache_deps.outputs.cache-hit != 'true'
+        run: |
+          npm install -D prisma ts-node tsconfig-paths
+      - name: Prisma DB Push & DB Seed/Reset
+        if: needs.setup.outputs.DB_CHANGES == 'true'
+        run: |
+          export DATABASE_URL=$(cat ./branch-conn-string.txt)
+          DATABASE_URL="${DATABASE_URL}" npm run db:reset
+
+      - name: Vercel CLI Setup
+        run: |
+          ls -al ./node_modules
+          echo "--------------------------------------------------"
+          ls -al
+          npm install --global vercel@latest
+
+        # vercel link --cwd "." --token ${{ secrets.VERCEL_TOKEN }} --yes
 
       - name: Delete DATABASE_URL from Vercel's Environment Variables for Github Branch
         continue-on-error: true
-        run: vercel env rm --yes DATABASE_URL ${{ env.VERCEL_ENV }} ${{ steps.gh_branch_name.outputs.GITHUB_BRANCH_NAME }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel env rm --yes DATABASE_URL ${{ env.VERCEL_ENV }} ${{ steps.gh_branch_name.outputs.GITHUB_BRANCH_NAME }} --token ${{ secrets.VERCEL_TOKEN }}
 
       - name: Add DATABASE_URL to Vercel's Env Vars for the Github Branch
-        run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} ${{ steps.gh_branch_name.outputs.GITHUB_BRANCH_NAME }} --token=${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
+        run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} ${{ steps.gh_branch_name.outputs.GITHUB_BRANCH_NAME }} --token ${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
 
       - name: Vercel Deploy Github Branch
-        run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+        run: vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
