@@ -524,8 +524,6 @@ jobs:
           echo "RESET_DB: ${RESET_DB}"
           echo "RESET_DB=${RESET_DB}" >> $GITHUB_OUTPUT
 
-          echo "testing"
-
       # only executes when Pscale DB needs to be reset (prisma db push and seed) during the ff. cases:
       # if pr!=sync, db changes on PR head branch
       # if pr==sync, db changes on sync (push commits have additional db changes)
