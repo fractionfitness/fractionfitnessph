@@ -18,9 +18,9 @@ if [ "$output" == "schema.prisma" ]; then
   DB_CHANGES=true
   ERROR=false
 else
-  output_error=`echo $output | grep -w "fatal" `
+  output_error=`echo $output | grep -w "fatal" || true 2>&1`
+  echo "output_error: $output_error"
   if [ -n "$output_error" ]; then
-    echo "output_error: $output_error"
     ERROR=true
     DB_CHANGES=""
   else
