@@ -125,10 +125,20 @@ jobs:
       # step (Delete Branch Password) needs this
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
-      - name: Check if Pscale Branch already created for Github Branch before PR was opened
-        id: branch_exists
-        continue-on-error: true
-        run: pscale branch show $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME
+      - name: Check if Pscale Branch was created for Github Branch before PR was opened
+        id: branch_exists_before_pr
+        # continue-on-error: true
+        # Pscale Branch Name created before PR was opened will not include the pr-refnum
+        working-directory: ./my-scripts/pscale/
+        run: |
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
+
+          ./check-branch-exists.sh $PSCALE_DB_NAME $PSCALE_ORG_NAME $PSCALE_BRANCH_NAME
+
+          echo "outputs: PSCALE_BRANCH_EXISTS"
+
+        # pscale branch show $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME
+        # will produce an error if branch doesn't exist
 
         # why doesn't this work? need to place inside of shell script? see create-branch-action for reference: https://github.com/planetscale/create-branch-action/blob/main/entrypoint.sh
         # run: |
@@ -138,8 +148,10 @@ jobs:
         #     echo "Pscale branch doesn't exist"
         #   fi
         #   echo "existing Pscale branch: ${output}"
+
+      # if: steps.branch_exists.outcome == 'success'
       - name: Delete Existing Pscale Branch
-        if: steps.branch_exists.outcome == 'success'
+        if: steps.branch_exists_before_pr.outputs.PSCALE_BRANCH_EXISTS == 'true'
         run: pscale branch delete $PSCALE_DB_NAME ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }} --org $PSCALE_ORG_NAME --force
 
       - name: Create Pscale Branch
