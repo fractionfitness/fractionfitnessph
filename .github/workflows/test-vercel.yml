@@ -31,6 +31,12 @@ jobs:
       ERROR_DB_CHANGES_ON_PR_SYNC: ${{ steps.db_changes_on_sync.outputs.ERROR }}
       GITHUB_BRANCH_NAME: ${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
     steps:
+      - name: check github context
+        run: |
+          echo "github.event.action ${{ github.event.action }}"
+          echo "github.event.pull_request ${{ github.event.pull_request }}"
+          echo "github.event.pull_request.state ${{ github.event.pull_request.state }}"
+          echo "github.event.pull_request.merged ${{ github.event.pull_request.merged }}"
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -87,12 +93,12 @@ jobs:
           echo "DB_CHANGES=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
           echo "ERROR=${ERROR}" >> "${GITHUB_OUTPUT}"
 
-      # - name: check outputs
-      #   run: |
-      #     echo "db_changes_on_pr DB_CHANGES: ${{ steps.db_changes.outputs.DB_CHANGES }}"
-      #     echo "db_changes_on_pr ERROR: ${{ steps.db_changes.outputs.ERROR }}"
-      #     echo "db_changes_on_sync DB_CHANGES: ${{ steps.db_changes_on_sync.outputs.DB_CHANGES }}"
-      #     echo "db_changes_on_sync ERROR: ${{ steps.db_changes_on_sync.outputs.ERROR }}"
+      - name: check outputs
+        run: |
+          echo "db_changes_on_pr DB_CHANGES: ${{ steps.db_changes.outputs.DB_CHANGES }}"
+          echo "db_changes_on_pr ERROR: ${{ steps.db_changes.outputs.ERROR }}"
+          echo "db_changes_on_sync DB_CHANGES: ${{ steps.db_changes_on_sync.outputs.DB_CHANGES }}"
+          echo "db_changes_on_sync ERROR: ${{ steps.db_changes_on_sync.outputs.ERROR }}"
 
   pscale-create-branch-pword-dr:
     # if: false
@@ -114,12 +120,12 @@ jobs:
       EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
 
     steps:
-      # - name: Check setup job outputs
-      #   run: |
-      #     echo "db_changes_on_pr DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}"
-      #     echo "db_changes_on_pr ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES }}"
-      #     echo "db_changes_on_sync DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}"
-      #     echo "db_changes_on_sync ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}"
+      - name: Check setup job outputs
+        run: |
+          echo "db_changes_on_pr DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}"
+          echo "db_changes_on_pr ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES }}"
+          echo "db_changes_on_sync DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}"
+          echo "db_changes_on_sync ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}"
 
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
