@@ -357,9 +357,10 @@ jobs:
         # alternative to double bracket conditional
         # elif [ -n "${EXISTING_DR_NUMBER}" -a "${EXISTING_DR_STATE}" == "open" ]; then
 
+  # if: always()
   vercel-deploy:
-    if: always()
     needs: [setup, pscale-create-branch-pword-dr]
+    if: needs.pscale-create-branch-pword-dr.result == 'success' || 'skipped'
     environment: preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
