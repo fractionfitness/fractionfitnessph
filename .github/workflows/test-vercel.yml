@@ -162,7 +162,7 @@ jobs:
       EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
     outputs:
       EXISTING_PWORD_NAME: ${{ steps.credentials.outputs.EXISTING_PWORD_NAME }}
-      EXISTING_PWORD_ID: ${{ steps.credentials.outputs.EXISTING_PWORD_NAME }}
+      EXISTING_PWORD_ID: ${{ steps.credentials.outputs.EXISTING_PWORD_ID }}
     # PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
     # SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
 
