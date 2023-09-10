@@ -464,7 +464,7 @@ jobs:
         uses: planetscale/setup-pscale-action@v1
       - name: Get Github dev environment's DATABASE_URL
         if: needs.setup.outputs.DB_CHANGES != 'true'
-        run: echo ${{ secrets.DEV_DATABASE_URL }} >> "./branch-conn-string.txt"
+        run: echo ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} >> "./branch-conn-string.txt"
 
       - name: Get Existing Pscale Branch Pword
         if: needs.setup.outputs.DB_CHANGES == 'true'
