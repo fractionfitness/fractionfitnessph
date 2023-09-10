@@ -381,7 +381,7 @@ jobs:
           name: ${{ env.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
           path: ./branch-conn-string.txt
 
-      - name: Check if Open Deploy Request exists for Branch
+      - name: Get Pscale DR info for Branch, if exists
         id: existing_dr
         working-directory: ./my-scripts/pscale/
         run: |
@@ -498,31 +498,18 @@ jobs:
       # Warning: this will save the value in bash history, so this is not recommend for secrets.
       # if there are no DB changes, save the credentials for ffph_dev main branch into branch-conn-string.txt | cache key: dev-admin-pwordid
 
-      # INSERT STEP HERE TO CHECK IF WE SHOULD execute "npm run db:reset"
       - name: Check if Pscale DB needs to be reset
         id: db_reset_check
+        working-directory: ./my-scripts/pscale/
         run: |
           PR_ACTIVITY_TYPE=${{ github.event.action }}
           DB_CHANGES=${{ needs.setup.outputs.DB_CHANGES }}
           DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
           ERROR_DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
 
-          if [ "$PR_ACTIVITY_TYPE" == "synchronize" ]; then
-            if [[ "$DB_CHANGES_ON_PR_SYNC" == "true" || "$ERROR_DB_CHANGES_ON_PR_SYNC" == "true" ]]; then
-              RESET_DB=true
-            else
-              RESET_DB=false
-            fi
-          else
-            if [ "$DB_CHANGES" == "true" ]; then
-              RESET_DB=true
-            else
-              RESET_DB=false
-            fi
-          fi
+          source ./check-db-reset.sh
 
-          echo "RESET_DB: ${RESET_DB}"
-          echo "RESET_DB=${RESET_DB}" >> $GITHUB_OUTPUT
+          echo "step outputs: RESET_DB"
 
       # only executes when Pscale DB needs to be reset (prisma db push and seed) during the ff. cases:
       # if pr!=sync, db changes on PR head branch
