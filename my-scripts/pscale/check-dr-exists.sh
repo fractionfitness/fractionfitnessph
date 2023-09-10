@@ -9,6 +9,7 @@
 # only gets last deploy request for the branch (even if there are many closed and not deployed/complete requests)
 output=$(eval " pscale deploy-request show $1 $2 --org $3 | grep -w \"$2[ $]\" " 2>&1)
 exit_status=$?
+echo "exit_status $exit_status"
 echo "output of pscale password list: ${output}"
 
 if [ $exit_status -eq 0 ]; then

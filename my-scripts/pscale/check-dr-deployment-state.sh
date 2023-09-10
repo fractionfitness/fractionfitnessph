@@ -1,6 +1,8 @@
 #!/bin/bash
 
-if [[ "$STATE" == "open" && "$APPROVED" == "Yes" && "$DEPLOYMENT_STATE" == "ready" && "$DEPLOYABLE" == "Yes" ]]; then
+if [ "$EXISTS" != "true" ]: then
+  echo "Planetscale Deploy Request does not exist yet..."
+elif [[ "$EXISTS" == "true" && "$STATE" == "open" && "$APPROVED" == "Yes" && "$DEPLOYMENT_STATE" == "ready" && "$DEPLOYABLE" == "Yes" ]]; then
   echo "Planetscale Deploy Request is ready for Deployment"
   exit 0
 else

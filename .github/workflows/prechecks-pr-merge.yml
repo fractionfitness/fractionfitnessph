@@ -75,6 +75,7 @@ jobs:
         if: steps.dr_exists.outcome == 'success'
         working-directory: ./my-scripts/pscale/
         run: |
+          EXISTS=${{ steps.dr_exists.outputs.DR_EXISTS }}
           STATE=${{ steps.dr_exists.outputs.DR_STATE }}
           APPROVED=${{ steps.dr_exists.outputs.DR_APPROVED }}
           DEPLOYMENT_STATE=${{ steps.dr_exists.outputs.DR_DEPLOY_STATE }}
