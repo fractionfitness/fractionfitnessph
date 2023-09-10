@@ -37,6 +37,7 @@ jobs:
       GITHUB_BRANCH_NAME: ${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
       SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
       PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+      PSCALE_BRANCH_EXISTS: ${{ steps.branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
       EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
 
@@ -130,6 +131,18 @@ jobs:
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
 
+      # need to check if PSCALE_BRANCH_NAME exists in Planetscale to skip next job if already existing
+      - name: Check if Pscale Branch was created for Github Branch before PR was opened or DB changes pushed to PR Head
+        id: branch_exists
+        # continue-on-error: true
+        # Pscale Branch Name created before PR was opened will not include the pr-refnum
+        working-directory: ./my-scripts/pscale/
+        run: |
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+          ./check-branch-exists.sh $PSCALE_DB_NAME $PSCALE_ORG_NAME $PSCALE_BRANCH_NAME
+
+          echo "outputs: PSCALE_BRANCH_EXISTS"
+
       - name: Get Branch Password if exists
         if: steps.db_changes.outputs.DB_CHANGES == 'true'
         id: existing_pword
@@ -143,9 +156,11 @@ jobs:
 
           echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
 
-  # should not run on PR synchronize activity type
+  # should not run on PR synchronize activity type - WRONG!!
+  # should also run on pr-sync event since if there were no db changes when pr was opened, this job will not fire. if there are db changes on succeeding pushes, it also wont fire with this condition
+  # if: needs.setup.outputs.DB_CHANGES == 'true' && github.event.action != 'synchronize'
   pscale-create-branch-pword-dr:
-    if: needs.setup.outputs.DB_CHANGES == 'true' && github.event.action != 'synchronize'
+    if: needs.setup.outputs.DB_CHANGES == 'true' && needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'false'
     needs: setup
     runs-on: ubuntu-latest
     environment: preview
@@ -203,7 +218,8 @@ jobs:
       # step (Delete Branch Password) needs this
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
-      - name: Check if Pscale Branch was created for Github Branch before PR was opened
+      - name: Check if Pscale Branch was created for Github Branch using SHORTENED_GH_BRANCH_NAME
+        # only happens when manually creating a branch using the SHORTENED_GH_BRANCH_NAME or using a workflow that creates a Pscale Branch on commit pushes
         id: branch_exists_before_pr
         # continue-on-error: true
         # Pscale Branch Name created before PR was opened will not include the pr-refnum
