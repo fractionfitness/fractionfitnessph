@@ -560,13 +560,14 @@ jobs:
         run: |
           npm install --global vercel@latest
 
-          vercel link --yes --cwd "." --token ${{ secrets.VERCEL_TOKEN }}
+          vercel pull --yes --environment ${{ env.VERCEL_ENV }} --token ${{ secrets.VERCEL_TOKEN }}
 
           source ./my-scripts/vercel/check-vercel-env.sh ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME ${{ secrets.VERCEL_TOKEN }} "DATABASE_URL"
 
           echo "DATABASE_URL exists? $EXISTS"
           echo "DATABASE_URL_EXISTS=${EXISTS}" >> "${GITHUB_OUTPUT}"
 
+        # vercel link --yes --cwd "." --token ${{ secrets.VERCEL_TOKEN }}
         # vercel env ls encrypts env var value so cannot check if it matches to branch-conn-string.txt
         # vercel env pull .env.local --yes --environment ${{ env.VERCEL_ENV }} --token ${{ secrets.VERCEL_TOKEN }}
         # vercel env pull to download to a specific file but need to use "vercel link", beforehand
@@ -600,6 +601,7 @@ jobs:
           git switch -c "$GITHUB_BRANCH_NAME"
           echo "git branch:  $(git branch)"
           vercel deploy --token ${{ secrets.VERCEL_TOKEN }} >deployment-url.txt 2>error.txt
+          source ./my-scripts/vercel/check-deploy.sh
 
         # must use vercel build
         # but how to set NEXTAUTH_URL=https://{VERCEL_URL} when the VERCEL_URL is only available during deployment
