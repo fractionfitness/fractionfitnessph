@@ -49,7 +49,7 @@ fi
 
 # Vercel should only automatically deploy when pushes/merges are made to Branches: "main" and "dev"
 # deployment for branches (feat, staging, etc.) to be merged (via PR) into "dev" or "main" should be initiated by github actions workflows
-if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "dev" ]] ; then
+if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "dev" || "$VERCEL_GIT_COMMIT_REF" == "merge" ]] ; then
 
   # Proceed with the build
   echo "VERCEL_GIT_COMMIT_REF ${VERCEL_GIT_COMMIT_REF}"
