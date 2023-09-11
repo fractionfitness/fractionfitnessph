@@ -15,7 +15,7 @@ jobs:
     # if: github.base_ref == 'dev'
     if: github.base_ref == 'merge'
     runs-on: ubuntu-latest
-    environment: preview
+    environment: Preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}

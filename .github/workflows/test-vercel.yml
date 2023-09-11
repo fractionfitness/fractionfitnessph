@@ -22,7 +22,7 @@ env:
 jobs:
   setup:
     runs-on: ubuntu-latest
-    environment: preview
+    environment: Preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
@@ -182,7 +182,7 @@ jobs:
     if: ${{ needs.setup.outputs.DB_CHANGES == 'true' && ( needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'false' || needs.setup.outputs.EXISTING_PWORD_ID == ''|| needs.setup.outputs.EXISTING_PWORD_CACHE_HIT != 'true' ) }}
     needs: setup
     runs-on: ubuntu-latest
-    environment: preview
+    environment: Preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
@@ -438,7 +438,7 @@ jobs:
   vercel-deploy:
     needs: [setup, pscale-create-branch-pword-dr]
     if: always() && needs.pscale-create-branch-pword-dr.result == 'success' || 'skipped'
-    environment: preview
+    environment: Preview
     env:
       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
