@@ -72,7 +72,7 @@ jobs:
           ./check-dr-exists.sh $PSCALE_DB_NAME $PSCALE_BRANCH_NAME $PSCALE_ORG_NAME
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
-      - name: Check if Pscale DR is deployable
+      - name: Check if Pscale DR is ready for deployment
         if: steps.dr_exists.outcome == 'success'
         working-directory: ./my-scripts/pscale/
         run: |
