@@ -200,23 +200,3 @@ model Tester {
   id   Int    @id @default(autoincrement())
   name String
 }
-
-model Tester2 {
-  id   Int    @id @default(autoincrement())
-  last_name String
-}
-
-model Tester3 {
-  id   Int    @id @default(autoincrement())
-  last_name String
-}
-
-model Tester4 {
-  id   Int    @id @default(autoincrement())
-  last_name String
-}
-
-model Tester5 {
-  id   Int    @id @default(autoincrement())
-  last_name String
-}
