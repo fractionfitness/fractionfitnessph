@@ -10,7 +10,7 @@ env:
   NODE_VERSION: 18.13.0
 
 jobs:
-  prechecks-pr-closed-dev:
+  setup-pr-closed-dev:
     # if: github.base_ref == 'dev'
     if: github.base_ref == 'merge'
     runs-on: ubuntu-latest
@@ -64,10 +64,10 @@ jobs:
 
   # no need to check pull_request activity type if closed
   # if: github.base_ref == 'dev' && github.event.pull_request.state == 'closed' && github.event.pull_request.merged == false
-  # if: github.base_ref == 'dev' && needs.prechecks-pr-closed-dev.outputs.DB_CHANGES == true
+  # if: github.base_ref == 'dev' && needs.setup-pr-closed-dev.outputs.DB_CHANGES == 'true'
   pscale-cleanup-pr-dev:
-    if: github.base_ref == 'merge' && needs.prechecks-pr-closed-dev.outputs.DB_CHANGES == true
-    needs: prechecks-pr-closed-dev
+    if: github.base_ref == 'merge' && needs.setup-pr-closed-dev.outputs.DB_CHANGES == 'true'
+    needs: setup-pr-closed-dev
     runs-on: ubuntu-latest
     environment: preview
     env:
@@ -75,9 +75,16 @@ jobs:
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
-      PSCALE_BRANCH_NAME: ${{ needs.prechecks-pr-closed-dev.outputs.PSCALE_BRANCH_NAME }}
-      # DB_CHANGES: ${{ needs.prechecks-pr-closed-dev.outputs.DB_CHANGES }}
+      PSCALE_BRANCH_NAME: ${{ needs.setup-pr-closed-dev.outputs.PSCALE_BRANCH_NAME }}
+      # DB_CHANGES: ${{ needs.setup-pr-closed-dev.outputs.DB_CHANGES }}
     steps:
+      - name: Check github context
+        run: |
+          echo "github.base_ref ${{ github.base_ref }}"
+          echo "needs.setup-pr-closed-dev.outputs.DB_CHANGES ${{ needs.setup-pr-closed-dev.outputs.DB_CHANGES }}"
+          echo "github.event.pull_request.merged ${{ github.event.pull_request.merged }}"
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Planetscale Setup
         id: pscale_setup
         uses: planetscale/setup-pscale-action@v1
@@ -97,6 +104,7 @@ jobs:
       #     DR_NUMBER=${{ steps.existing_dr.outputs.DR_NUMBER }}
       #     PSCALE_ORG_NAME=${{ env.PSCALE_ORG_NAME }}
       #     pscale deploy-request close $PSCALE_DB_NAME $DR_NUMBER --org $PSCALE_ORG_NAME
+      # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
       - name: Deploy Pscale Deploy Request
         if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == true
         id: deploy_dr
@@ -133,8 +141,10 @@ jobs:
       # only delete pscale branch if STATE=closed and DEPLOY_STATE=complete ??? or just delete w/o checking
       # need to check since for gh main branch, we do manual deploy-request apply, skip-revert, and "branch delete" and so that this workflow is more flexible and reusable
       - name: Close Pscale Deploy Request
-        if: github.event.pull_request.merged == false
-        run: pscale deploy-request close
+        if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == false
+        run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
+
+      # should always run
       - name: Check existing Pscale DR STATE and DEPLOY_STATE
         id: dr_state
         working-directory: ./my-scripts/pscale/
@@ -148,8 +158,8 @@ jobs:
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
   # vercel-deploy-dev:
-  #   if: github.base_ref == 'dev' && github.event.pull_request.merged == true && needs.prechecks-pr-closed-dev.outputs.DB_CHANGES == true
-  #   needs: prechecks-pr-closed-dev
+  #   if: github.base_ref == 'dev' && github.event.pull_request.merged == true && needs.setup-pr-closed-dev.outputs.DB_CHANGES == 'true'
+  #   needs: setup-pr-closed-dev
   #   runs-on: ubuntu-latest
   #   environment: preview
   #   steps:
@@ -160,19 +170,19 @@ jobs:
   # prisma db push can be placed in pscale-cleanup
   # vercel automatically deploys on commits to dev and main so this job is not needed
 
-  # prechecks-pr-closed-main:
+  # setup-pr-closed-main:
   #   if: github.base_ref == 'main'
   #   runs-on: ubuntu-latest
   #   environment: production
 
   # pscale-cleanup-pr-main:
   #   if: github.base_ref == 'main'
-  #   needs: prechecks-pr-closed-main
+  #   needs: setup-pr-closed-main
   #   runs-on: ubuntu-latest
   #   environment: production
 
   # vercel-deploy-main:
   #   if: github.base_ref == 'main' && github.event.pull_request.merged == true
-  #   needs: prechecks-pr-closed-main
+  #   needs: setup-pr-closed-main
   #   runs-on: ubuntu-latest
   #   environment: production
