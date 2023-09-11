@@ -34,6 +34,10 @@ jobs:
           echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
           echo "github.head_ref ${{ github.head_ref }}"
           echo "github.base_ref ${{ github.base_ref }}"
+          echo "github.event.pull_request.base.ref ${{ github.event.pull_request.merge_commit_sha }} "
+          echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
+          echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+        # cat $GITHUB_EVENT_PATH
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -44,15 +48,18 @@ jobs:
         id: db_changes
         working-directory: ./my-scripts/pscale/
         run: |
-          COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
+          MERGE_COMMIT=${{ github.event.pull_request.merge_commit_sha }}
           COMMIT_ON_BASE=${{ github.event.pull_request.base.sha }}
 
-          source ./check-db-changes.sh $COMMIT_ON_HEAD $COMMIT_ON_BASE
+          source ./check-db-changes.sh $MERGE_COMMIT $COMMIT_ON_BASE
 
           echo "DB_CHANGES: ${DB_CHANGES}"
           echo "ERROR: $ERROR"
           echo "DB_CHANGES=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
           echo "ERROR=${ERROR}" >> "${GITHUB_OUTPUT}"
+
+      # COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
+
       - name: Planetscale Setup
         if: steps.db_changes.outputs.DB_CHANGES == 'true'
         id: pscale_setup
