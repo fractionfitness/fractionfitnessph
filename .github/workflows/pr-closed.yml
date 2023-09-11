@@ -131,21 +131,46 @@ jobs:
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
-      # no need to close DR since will be closed after deleting branch
-      # - name: Close Pscale Deploy Request
-      #   if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == false
-      #   run: |
-      #     PSCALE_DB_NAME=${{ env.PSCALE_DB_NAME }}
-      #     DR_NUMBER=${{ steps.existing_dr.outputs.DR_NUMBER }}
-      #     PSCALE_ORG_NAME=${{ env.PSCALE_ORG_NAME }}
-      #     pscale deploy-request close $PSCALE_DB_NAME $DR_NUMBER --org $PSCALE_ORG_NAME
       # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
+      # if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == true
+      # if: steps.deploy_dr.outcome == 'success'
       - name: Deploy Pscale Deploy Request
-        if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == true
+        if: steps.existing_dr.outputs.DR_EXISTS == 'true' && github.event.pull_request.merged == true
         id: deploy_dr
-        run: pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }}
+        working-directory: ./.pscale/cli-helper-scripts/
+        run: |
+          RETRIES=10
+          MAX_TIMEOUT=60
+
+          source ./use-pscale-docker-image.sh
+          source ./wait-for-deploy-request-merged.sh
+
+          pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }}
+
+          wait_for_deploy_request_merged $RETRIES ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} ${{ env.PSCALE_ORG_NAME }} $MAX_TIMEOUT
+
+          if [ $? -ne 0 ]; then
+            echo "Error: wait_for_deploy_request_merged returned non-zero exit code"
+            echo "Check out the deploy request status at $deploy_request"
+            exit 5
+          else
+            echo "Check out the deploy request at $deploy_request"
+          fi
+
         # run: pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
+
+      #  best to use this, since no need for a separate step to wait for deployment
+      # - name: Deploy deploy request
+      #   if: steps.existing_dr.outputs.DR_EXISTS == 'true' && github.event.pull_request.merged == true
+      #   id: deploy_dr
+      #   uses: planetscale/deploy-deploy-request-action@v3
+      #   with:
+      #     org_name: ${{ env.PSCALE_ORG_NAME }}
+      #     database_name: ${{ env.PSCALE_DB_NAME }}
+      #     number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
+      #     wait: true
       - name: Skip Revert Pscale Deploy Request
+        # if: steps.deploy_dr.outcome == 'success' && github.base_ref == 'merge'
         if: steps.deploy_dr.outcome == 'success' && github.base_ref == 'merge'
         run: pscale deploy-request skip-revert ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
       - name: Install NodeJS
