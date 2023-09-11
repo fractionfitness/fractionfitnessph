@@ -64,8 +64,8 @@ jobs:
 
   # no need to check pull_request activity type if closed
   # if: github.base_ref == 'dev' && github.event.pull_request.state == 'closed' && github.event.pull_request.merged == false
+  # if: github.base_ref == 'dev' && needs.prechecks-pr-closed-dev.outputs.DB_CHANGES == true
   pscale-cleanup-pr-dev:
-    # if: github.base_ref == 'dev' && needs.prechecks-pr-closed-dev.outputs.DB_CHANGES == true
     if: github.base_ref == 'merge' && needs.prechecks-pr-closed-dev.outputs.DB_CHANGES == true
     needs: prechecks-pr-closed-dev
     runs-on: ubuntu-latest
