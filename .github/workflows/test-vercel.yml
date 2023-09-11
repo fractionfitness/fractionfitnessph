@@ -37,9 +37,10 @@ jobs:
       GITHUB_BRANCH_NAME: ${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
       SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
       PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
-      PSCALE_BRANCH_EXISTS: ${{ steps.branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
+      PSCALE_BRANCH_EXISTS: ${{ steps.branch_exists_on_pr.outputs.PSCALE_BRANCH_EXISTS }}
       EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+      EXISTING_PWORD_CACHE_HIT: ${{ steps.pword_cache_hit.outputs.EXISTING_PWORD_CACHE_HIT }}
 
     steps:
       # - name: check github context
@@ -62,11 +63,9 @@ jobs:
           path: |
             ./.pscale/cli-helper-scripts/
             ./my-scripts/
-
       - name: Get Github Branch Name
         id: gh_branch
         run: echo "GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "${GITHUB_OUTPUT}"
-
         # run for all activity types of the pull_request event
       - name: Check DB changes on PR (Head vs. Base)
         # continue-on-error: true
@@ -87,7 +86,6 @@ jobs:
           echo "ERROR: $ERROR"
           echo "DB_CHANGES=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
           echo "ERROR=${ERROR}" >> "${GITHUB_OUTPUT}"
-
       # only run for pull_request synchronize activity type
       - name: Check DB changes on Synchronize PR
         if: github.event.action == 'synchronize'
@@ -129,11 +127,13 @@ jobs:
         # echo "GITHUB_BRANCH_NAME based on push event: ${{ github.event.push.ref}}"
 
       - name: Planetscale Setup
+        if: steps.db_changes.outputs.DB_CHANGES == 'true'
         uses: planetscale/setup-pscale-action@v1
 
       # need to check if PSCALE_BRANCH_NAME exists in Planetscale to skip next job if already existing
-      - name: Check if Pscale Branch was created for Github Branch before PR was opened or DB changes pushed to PR Head
-        id: branch_exists
+      - name: Check if Pscale Branch already exists after PR is opened
+        if: steps.db_changes.outputs.DB_CHANGES == 'true'
+        id: branch_exists_on_pr
         # continue-on-error: true
         # Pscale Branch Name created before PR was opened will not include the pr-refnum
         working-directory: ./my-scripts/pscale/
@@ -144,7 +144,7 @@ jobs:
           echo "outputs: PSCALE_BRANCH_EXISTS"
 
       - name: Get Branch Password if exists
-        if: steps.db_changes.outputs.DB_CHANGES == 'true'
+        if: steps.branch_exists_on_pr.outputs.PSCALE_BRANCH_EXISTS == 'true'
         id: existing_pword
         shell: bash
         working-directory: ./my-scripts/pscale/
@@ -152,15 +152,34 @@ jobs:
           PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
           PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
 
-          ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
+          source ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
 
-          echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
+          echo "Step Outputs:"
+          echo "EXISTING_PWORD_ID: ${PWORD_ID}"
+          echo "EXISTING_PWORD_NAME: ${PWORD_NAME}"
+
+          echo "EXISTING_PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
+          echo "EXISTING_PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
+
+      # only check cache (not downloaded), if an existing password exists in planetscale
+      - name: Check if Cache exists for Branch Password
+        if: steps.existing_pword.outputs.EXISTING_PWORD_ID != ''
+        id: check_cache_pword
+        uses: actions/cache/restore@v3
+        with:
+          path: ./branch-conn-string.txt
+          key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+          lookup-only: true
+      - name: Output Pscale Pword Cache Hit Status
+        if: steps.check_cache_pword.outputs.cache-hit == 'true'
+        id: pword_cache_hit
+        run: echo "EXISTING_PWORD_CACHE_HIT=true" >> $GITHUB_OUTPUT
 
   # should not run on PR synchronize activity type - WRONG!!
   # should also run on pr-sync event since if there were no db changes when pr was opened, this job will not fire. if there are db changes on succeeding pushes, it also wont fire with this condition
   # if: needs.setup.outputs.DB_CHANGES == 'true' && github.event.action != 'synchronize'
   pscale-create-branch-pword-dr:
-    if: needs.setup.outputs.DB_CHANGES == 'true' && needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'false'
+    if: ${{ needs.setup.outputs.DB_CHANGES == 'true' && ( needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'false' || needs.setup.outputs.EXISTING_PWORD_ID == ''|| needs.setup.outputs.EXISTING_PWORD_CACHE_HIT != 'true' ) }}
     needs: setup
     runs-on: ubuntu-latest
     environment: preview
@@ -175,20 +194,21 @@ jobs:
       PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
       EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
+      EXISTING_PWORD_CACHE_HIT: ${{ needs.setup.outputs.EXISTING_PWORD_CACHE_HIT }}
     outputs:
-      EXISTING_PWORD_NAME: ${{ steps.credentials.outputs.EXISTING_PWORD_NAME }}
-      EXISTING_PWORD_ID: ${{ steps.credentials.outputs.EXISTING_PWORD_ID }}
-    # PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
-    # SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
+      CREATED_PWORD_NAME: ${{ steps.credentials.outputs.CREATED_PWORD_NAME }}
+      CREATED_PWORD_ID: ${{ steps.credentials.outputs.CREATED_PWORD_ID }}
 
     steps:
-      # - name: Check setup job outputs
-      #   run: |
-      #     echo "db_changes_on_pr DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}"
-      #     echo "db_changes_on_pr ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES }}"
-      #     echo "db_changes_on_sync DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}"
-      #     echo "db_changes_on_sync ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}"
-
+      - name: Check setup job outputs
+        run: |
+          echo "db_changes_on_pr DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}"
+          echo "db_changes_on_pr ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES }}"
+          echo "db_changes_on_sync DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}"
+          echo "db_changes_on_sync ERROR: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}"
+          echo "needs.setup.outputs.PSCALE_BRANCH_EXISTS ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS }}"
+          echo "needs.setup.outputs.EXISTING_PWORD_ID ${{ needs.setup.outputs.EXISTING_PWORD_ID }}"
+          echo "needs.setup.outputs.EXISTING_PWORD_CACHE_HIT ${{ needs.setup.outputs.EXISTING_PWORD_CACHE_HIT }}"
       - name: Download scripts artifact
         uses: actions/download-artifact@v3
         with:
@@ -197,32 +217,14 @@ jobs:
       - name: Make shell scripts executable
         run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
 
-      # different github branch name based on event (push vs. pull_request)
-      # Pscale Branch Name is based on Github Branch Name and PR ref number
-      # - name: Get Pscale Branch Name
-      #   id: branch_name
-      #   working-directory: ./my-scripts/pscale/
-      #   shell: bash
-      #   run: |
-      #     GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-      #     GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
-
-      #     echo "GITHUB_BRANCH_NAME based on ref: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-
-      #     ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
-
-      #     echo "outputs: SHORTENED_GH_BRANCH_NAME / PSCALE_BRANCH_NAME"
-
-      # echo "GITHUB_BRANCH_NAME based on push event: ${{ github.event.push.ref}}"
-
       # step (Delete Branch Password) needs this
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
       - name: Check if Pscale Branch was created for Github Branch using SHORTENED_GH_BRANCH_NAME
-        # only happens when manually creating a branch using the SHORTENED_GH_BRANCH_NAME or using a workflow that creates a Pscale Branch on commit pushes
-        id: branch_exists_before_pr
         # continue-on-error: true
+        # only happens when manually creating a branch using the SHORTENED_GH_BRANCH_NAME or using a workflow that creates a Pscale Branch on commit pushes
         # Pscale Branch Name created before PR was opened will not include the pr-refnum
+        id: branch_exists_before_pr
         working-directory: ./my-scripts/pscale/
         run: |
           ./check-branch-exists.sh $PSCALE_DB_NAME $PSCALE_ORG_NAME $SHORTENED_GH_BRANCH_NAME
@@ -242,7 +244,7 @@ jobs:
         #   fi
         #   echo "existing Pscale branch: ${output}"
 
-      # if: steps.branch_exists.outcome == 'success'
+      # if: steps.branch_exists_before_pr.outcome == 'success'
       - name: Delete Existing Pscale Branch
         if: steps.branch_exists_before_pr.outputs.PSCALE_BRANCH_EXISTS == 'true'
         run: pscale branch delete $PSCALE_DB_NAME $SHORTENED_GH_BRANCH_NAME --org $PSCALE_ORG_NAME --force
@@ -259,43 +261,21 @@ jobs:
           wait: true
           check_exists: true
 
-      # can possibly move this to job: prep
-      # - name: Get Branch Password if exists
-      #   id: existing_pword
-      #   shell: bash
-      #   working-directory: ./my-scripts/pscale/
-      #   run: |
-      #     PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
-
-      #     ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
-
-      #     echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
-
-      # PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
-      # PWORD_ID=`pscale password list ${{ env.PSCALE_DB_NAME }} ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --format json | jq -r "[.[] | select(.name == \"${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}-${PSCALE_PWORD_ROLE}\") ] | .[0].id "`
-
-      # if [ "${output}" != 'null' ]; then
-      #   export EXISTING_PWORD_ID="${PWORD_ID}"
-      # fi
-
-      # echo "EXISTING_PWORD_ID=${EXISTING_PWORD_ID}" >> $GITHUB_OUTPUT
-
-      # echo "EXISTING_PWORD_ID: ${EXISTING_PWORD_ID}"
-
-      # can possibly move this to job: prep
-      # only check cache (not downloaded), if an existing password exists in planetscale
-      - name: Check if Cache exists for Branch Password
-        if: env.EXISTING_PWORD_ID != ''
-        id: check_cache_pword
-        uses: actions/cache/restore@v3
-        with:
-          path: ./branch-conn-string.txt
-          key: ${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}
-          lookup-only: true
+      # # can possibly move this to job: prep
+      # # only check cache (not downloaded), if an existing password exists in planetscale
+      # - name: Check if Cache exists for Branch Password
+      #   if: env.EXISTING_PWORD_ID != ''
+      #   id: check_cache_pword
+      #   uses: actions/cache/restore@v3
+      #   with:
+      #     path: ./branch-conn-string.txt
+      #     key: ${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}
+      #     lookup-only: true
 
       # download cached pscale branch conn string file
       - name: Get Branch Connection String from Cache Hit
-        if: steps.check_cache_pword.outputs.cache-hit == 'true'
+        # if: steps.check_cache_pword.outputs.cache-hit == 'true'
+        if: env.EXISTING_PWORD_CACHE_HIT == 'true'
         uses: actions/cache/restore@v3
         with:
           path: ./branch-conn-string.txt
@@ -303,7 +283,8 @@ jobs:
 
       # delete if password exists & cache miss
       - name: Delete Branch Password if exists & cache miss
-        if: env.EXISTING_PWORD_ID != '' && steps.check_cache_pword.outputs.cache-hit != 'true'
+        # if: env.EXISTING_PWORD_ID != '' && steps.check_cache_pword.outputs.cache-hit != 'true'
+        if: env.EXISTING_PWORD_ID != '' && env.EXISTING_PWORD_CACHE_HIT != 'true'
         working-directory: ./my-scripts/pscale
         shell: bash
         run: |
@@ -313,12 +294,10 @@ jobs:
 
           delete-branch-password ${PSCALE_DB_NAME} ${PSCALE_BRANCH_NAME} ${PSCALE_ORG_NAME} ${EXISTING_PWORD_NAME}
 
-        # export PSCALE_PWORD_NAME=${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
-        # export PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME}}
-
       # create if nonexistent password or cache miss
+      # if: env.EXISTING_PWORD_ID == '' || steps.check_cache_pword.outputs.cache-hit != 'true'
       - name: Create Branch Password
-        if: env.EXISTING_PWORD_ID == '' || steps.check_cache_pword.outputs.cache-hit != 'true'
+        if: env.EXISTING_PWORD_ID == '' || env.EXISTING_PWORD_CACHE_HIT != 'true'
         id: create_pword
         uses: planetscale/create-branch-password-action@v3
         with:
@@ -342,9 +321,14 @@ jobs:
 
           PSCALE_PWORD_NAME=${{ env.PSCALE_BRANCH_NAME }}-${{ env.PSCALE_PWORD_ROLE }}
 
-          ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} ${{ env.PSCALE_ORG_NAME }} $PSCALE_PWORD_NAME
+          source ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} ${{ env.PSCALE_ORG_NAME }} $PSCALE_PWORD_NAME
 
-          echo "outputs: EXISTING_PWORD_ID | EXISTING_PWORD_NAME"
+          echo "Step Outputs:"
+          echo "CREATED_PWORD_ID: ${PWORD_ID}"
+          echo "CREATED_PWORD_NAME: ${PWORD_NAME}"
+
+          echo "CREATED_PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
+          echo "CREATED_PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
 
         # PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
         # PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
@@ -379,7 +363,7 @@ jobs:
         uses: actions/cache/save@v3
         with:
           path: ./branch-conn-string.txt
-          key: ${{ steps.credentials.outputs.EXISTING_PWORD_NAME}}-${{ steps.credentials.outputs.EXISTING_PWORD_ID }}
+          key: ${{ steps.credentials.outputs.CREATED_PWORD_NAME}}-${{ steps.credentials.outputs.CREATED_PWORD_ID }}
 
       # parse branch conn string from file for use in succeeding steps
       - name: Output Database Url from Branch connection string
@@ -403,7 +387,7 @@ jobs:
         run: |
           ./check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_BRANCH_NAME}" "${PSCALE_ORG_NAME}"
 
-          echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+          echo "Step Outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
       # only runs when no existing DR OR if it exists, its state='closed'
       - name: Create Deploy Request
@@ -463,8 +447,6 @@ jobs:
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       VERCEL_ENV: ${{ vars.VERCEL_ENV }}
       GITHUB_BRANCH_NAME: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
-      EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
-      EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -478,26 +460,29 @@ jobs:
         run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
       - name: Planetscale Setup
         uses: planetscale/setup-pscale-action@v1
-      - name: Get Github dev environment's DATABASE_URL
+
+      # connect deployment to Pscale Src Branch (github dev/main branch) if there are no db changes
+      - name: Get Github environment's PSCALE_SRC_ BRANCH_DATABASE_URL
         if: needs.setup.outputs.DB_CHANGES != 'true'
         run: echo ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} >> "./branch-conn-string.txt"
 
-      - name: Get Existing Pscale Branch Pword
+      # connect deployment to Pscale Target Branch (e.g. github feat/fix/staging branch) if there are db changes
+      - name: Get Pscale Branch Pword Name and ID (existing from previous workflow runs or newly created from previous job)
         if: needs.setup.outputs.DB_CHANGES == 'true'
-        id: existing_pword
+        id: branch_pword
         run: |
-          if [ -n "${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_NAME }}" ]; then
-            EXISTING_PWORD_NAME=${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_NAME }}
-            EXISTING_PWORD_ID=${{ needs.pscale-create-branch-pword-dr.outputs.EXISTING_PWORD_ID }}
+          if [ -n "${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_NAME }}" ]; then
+            PWORD_NAME=${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_NAME }}
+            PWORD_ID=${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_ID }}
           else
-            EXISTING_PWORD_NAME=${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
-            EXISTING_PWORD_ID=${{ needs.setup.outputs.EXISTING_PWORD_ID }}
+            PWORD_NAME=${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
+            PWORD_ID=${{ needs.setup.outputs.EXISTING_PWORD_ID }}
           fi
 
-          echo "EXISTING_PWORD_NAME=${EXISTING_PWORD_NAME}" >> $GITHUB_OUTPUT
-          echo "EXISTING_PWORD_ID=${EXISTING_PWORD_ID}" >> $GITHUB_OUTPUT
+          echo "PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
+          echo "PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
 
-      # if password was created in previous job (pscale-create-branch-pword-dr), use that, otherwise, use the password generated by setup job
+      # if pword was created in previous job (pscale-create-branch-pword-dr), use that, otherwise, use the existing pword retrieved by setup job
 
       - name: Restore Cache Branch Password
         if: needs.setup.outputs.DB_CHANGES == 'true'
@@ -505,7 +490,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: ./branch-conn-string.txt
-          key: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}-${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+          key: ${{ steps.branch_pword.outputs.PWORD_NAME }}-${{ steps.branch_pword.outputs.PWORD_ID }}
 
       # key: ${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}
       # - name: Read Branch Connection String
@@ -525,7 +510,7 @@ jobs:
 
           source ./check-db-reset.sh
 
-          echo "step outputs: RESET_DB"
+          echo "Step Outputs: RESET_DB"
 
       # only executes when Pscale DB needs to be reset (prisma db push and seed) during the ff. cases:
       # if pr!=sync, db changes on PR head branch
@@ -563,15 +548,14 @@ jobs:
 
       # should only run if step: install_nodejs was successfully executed, in order to reset the db
       # if: steps.install_nodejs.outcome == 'success'
-      # if: steps.db_reset_check.outputs.RESET_DB == 'true'
+      # if: false
       - name: Prisma DB Push & DB Seed/Reset
-        # ENABLE THIS AFTER TESTING!!!!!!!!!!!!!!!!!!!!!!!!
-        if: false
+        if: steps.db_reset_check.outputs.RESET_DB == 'true'
         run: |
           export DATABASE_URL=$(cat ./branch-conn-string.txt)
           DATABASE_URL="${DATABASE_URL}" npm run db:reset
 
-      - name: Vercel CLI Setup & DATABASE_URL check
+      - name: Vercel CLI Setup & Vercel Env Var DATABASE_URL check
         id: vercel_setup
         run: |
           npm install --global vercel@latest
