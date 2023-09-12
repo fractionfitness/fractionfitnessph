@@ -375,11 +375,11 @@ jobs:
 
       # used for checking conn string if it coincides with pscale value
       # no need to implement artifacts to store branch conn string
-      - name: Upload Branch Connection String
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
-          path: ./branch-conn-string.txt
+      # - name: Upload Branch Connection String
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ${{ env.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
+      #     path: ./branch-conn-string.txt
 
       - name: Get Pscale DR info for Branch, if exists
         id: existing_dr
@@ -433,42 +433,39 @@ jobs:
         # alternative to double bracket conditional
         # elif [ -n "${EXISTING_DR_NUMBER}" -a "${EXISTING_DR_STATE}" == "open" ]; then
 
-  # if: always()
-  # pscale-create-branch-pword-dr job will be skipped on PR synchronize
-  vercel-deploy:
+    # prechecks before vercel deployment and pscale db reset
+  prechecks-deploy:
     needs: [setup, pscale-create-branch-pword-dr]
+    # pscale-create-branch-pword-dr job will be skipped on PR synchronize
     if: always() && needs.pscale-create-branch-pword-dr.result == 'success' || 'skipped'
+    runs-on: ubuntu-latest
     environment: Preview
     env:
-      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
-      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
-      PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
-      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
-      VERCEL_ENV: ${{ vars.VERCEL_ENV }}
-      GITHUB_BRANCH_NAME: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
-    runs-on: ubuntu-latest
+      # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      # PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      # PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      # PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
+      # PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+      # VERCEL_ENV: ${{ vars.VERCEL_ENV }}
+      # PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
+      # GITHUB_BRANCH_NAME: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
+      DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}
+      DB_CHANGES_ON_PR_SYNC: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
+      ERROR_DB_CHANGES_ON_PR_SYNC: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
+    outputs:
+      RESET_DB: ${{ steps.db_reset_check.outputs.RESET_DB }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      # - name: Download scripts artifact
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: scripts
-      #     path: ./
       - name: Make shell scripts executable
-        run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
-      - name: Planetscale Setup
-        uses: planetscale/setup-pscale-action@v1
+        run: chmod -R +x ./my-scripts/pscale/
 
-      # connect deployment to Pscale Src Branch (github dev/main branch) if there are no db changes
-      - name: Get Github environment's PSCALE_SRC_ BRANCH_DATABASE_URL
-        if: needs.setup.outputs.DB_CHANGES != 'true'
+      - name: Get Github environment's PSCALE_SRC_BRANCH_DATABASE_URL
+        if: env.DB_CHANGES != 'true'
         run: echo ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} >> "./branch-conn-string.txt"
 
-      # connect deployment to Pscale Target Branch (e.g. github feat/fix/staging branch) if there are db changes
       - name: Get Pscale Branch Pword Name and ID (existing from previous workflow runs or newly created from previous job)
-        if: needs.setup.outputs.DB_CHANGES == 'true'
+        if: env.DB_CHANGES == 'true'
         id: branch_pword
         run: |
           if [ -n "${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_NAME }}" ]; then
@@ -482,43 +479,59 @@ jobs:
           echo "PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
           echo "PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
 
-      # if pword was created in previous job (pscale-create-branch-pword-dr), use that, otherwise, use the existing pword retrieved by setup job
+        # if pword was created in previous job (pscale-create-branch-pword-dr), use that, otherwise, use the existing pword retrieved by setup job
 
       - name: Restore Cache Branch Password
-        if: needs.setup.outputs.DB_CHANGES == 'true'
+        if: env.DB_CHANGES == 'true'
         id: check_cache_pword
         uses: actions/cache/restore@v3
         with:
           path: ./branch-conn-string.txt
           key: ${{ steps.branch_pword.outputs.PWORD_NAME }}-${{ steps.branch_pword.outputs.PWORD_ID }}
 
-      # key: ${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}
+      # used for checking conn string if it coincides with pscale value
+      # no need to implement artifacts to store branch conn string
+      - name: Upload Branch Connection String as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: branch-conn-string
+          path: ./branch-conn-string.txt
+
+      # name: ${{ env.PSCALE_BRANCH_NAME}}-${{ env.PSCALE_PWORD_ROLE }}
+
       # - name: Read Branch Connection String
       #   run: |
       #     cat ./branch-conn-string.txt
       # Warning: this will save the value in bash history, so this is not recommend for secrets.
       # if there are no DB changes, save the credentials for ffph_dev main branch into branch-conn-string.txt | cache key: dev-admin-pwordid
-
       - name: Check if Pscale DB needs to be reset
+        if: env.DB_CHANGES == 'true'
         id: db_reset_check
         working-directory: ./my-scripts/pscale/
         run: |
           PR_ACTIVITY_TYPE=${{ github.event.action }}
-          DB_CHANGES=${{ needs.setup.outputs.DB_CHANGES }}
-          DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
-          ERROR_DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
+          DB_CHANGES=${{ env.DB_CHANGES }}
+          DB_CHANGES_ON_PR_SYNC=${{ env.DB_CHANGES_ON_PR_SYNC }}
+          ERROR_DB_CHANGES_ON_PR_SYNC=${{ env.ERROR_DB_CHANGES_ON_PR_SYNC }}
 
           source ./check-db-reset.sh
 
           echo "Step Outputs: RESET_DB"
 
+  pscale-db-reset:
+    if: always() && needs.prechecks-deploy.outputs.RESET_DB == 'true'
+    needs: prechecks-deploy
+    runs-on: ubuntu-latest
+    environment: Preview
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       # only executes when Pscale DB needs to be reset (prisma db push and seed) during the ff. cases:
       # if pr!=sync, db changes on PR head branch
       # if pr==sync, db changes on sync (push commits have additional db changes)
-      # or if pr==sync and there was an error checking for db changes on sync
-      # if: (github.event.action != 'synchronize' && needs.setup.outputs.DB_CHANGES == 'true') || (github.event.action == 'synchronize' && (needs.setup.outputs.DB_CHANGES_ON_PR_SYNC == 'true' || needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC == 'true'))
+      # or if pr==sync and there was an error checking for db changes on sync and db changes on PR head branch
       - name: Install NodeJS
-        if: steps.db_reset_check.outputs.RESET_DB == 'true'
         id: install_nodejs
         uses: actions/setup-node@v3
         with:
@@ -526,35 +539,135 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      # if: steps.install_nodejs.outcome == 'success'
       - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
-        if: steps.db_reset_check.outputs.RESET_DB == 'true'
         id: cache_deps
         uses: actions/cache@v3
         with:
           path: ./node_modules
           key: deps-node-modules-${{ hashFiles('package-lock.json') }}
 
-      # if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
       - name: Install dependencies to enable Prisma DB Push and Seed/Reset
-        # need to check if cache-hit==false and not if it cache-hit!=true, since if step doesn't execute, no value will be set
-        # cache-hit==false doesn't work since action doesn't set it to false if cache miss, so need to also check if step was executed
-        if: steps.db_reset_check.outputs.RESET_DB == 'true' && steps.cache_deps.outputs.cache-hit != 'true'
+        # need to check if cache-hit!=true, since if step doesn't execute, no value will be set
+        if: steps.cache_deps.outputs.cache-hit != 'true'
         id: install_deps
         run: npm ci
 
-        # better to use "npm ci" vs installing selected dev deps, since action/cache won't work on selected installs (due to differing hashFiles(pkg-lock.json) values) and action/cache install speeds up when used after actions/setup-node@v3 (they have the same hashFiles() value)
-        # run: npm install -D prisma ts-node tsconfig-paths
+      # better to use "npm ci" vs installing selected dev deps, since action/cache won't work on selected installs (due to differing hashFiles(pkg-lock.json) values) and action/cache install speeds up when used after actions/setup-node@v3 (they have the same hashFiles() value)
+      # run: npm install -D prisma ts-node tsconfig-paths
 
-      # should only run if step: install_nodejs was successfully executed, in order to reset the db
-      # if: steps.install_nodejs.outcome == 'success'
-      # if: false
+      # only execute if artifact exists | how to check if artifact exists?
+      - name: Download Planetscale connection string
+        uses: actions/download-artifact@v3
+        with:
+          name: branch-conn-string
+          path: ./
+
       - name: Prisma DB Push & DB Seed/Reset
-        if: steps.db_reset_check.outputs.RESET_DB == 'true'
         run: |
           export DATABASE_URL=$(cat ./branch-conn-string.txt)
           DATABASE_URL="${DATABASE_URL}" npm run db:reset
 
+  vercel-deploy:
+    needs: [prechecks-deploy, setup]
+    if: always() && needs.prechecks-deploy.result == 'success'
+    runs-on: ubuntu-latest
+    environment: Preview
+    env:
+      VERCEL_ENV: ${{ vars.VERCEL_ENV }}
+      GITHUB_BRANCH_NAME: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
+      # PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      # PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      # PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      # PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
+      # PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Make shell scripts executable
+        run: chmod -R +x ./my-scripts/vercel/
+
+      # - name: Planetscale Setup
+      #   uses: planetscale/setup-pscale-action@v1
+      # connect deployment to Pscale Src Branch (github dev/main branch) if there are no db changes
+      # - name: Get Github environment's PSCALE_SRC_BRANCH_DATABASE_URL
+      #   if: needs.setup.outputs.DB_CHANGES != 'true'
+      #   run: echo ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} >> "./branch-conn-string.txt"
+      # connect deployment to Pscale Target Branch (e.g. github feat/fix/staging branch) if there are db changes
+      # - name: Get Pscale Branch Pword Name and ID (existing from previous workflow runs or newly created from previous job)
+      #   if: needs.setup.outputs.DB_CHANGES == 'true'
+      #   id: branch_pword
+      #   run: |
+      #     if [ -n "${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_NAME }}" ]; then
+      #       PWORD_NAME=${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_NAME }}
+      #       PWORD_ID=${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_ID }}
+      #     else
+      #       PWORD_NAME=${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
+      #       PWORD_ID=${{ needs.setup.outputs.EXISTING_PWORD_ID }}
+      #     fi
+      #     echo "PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
+      #     echo "PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
+      # if pword was created in previous job (pscale-create-branch-pword-dr), use that, otherwise, use the existing pword retrieved by setup job
+      # - name: Restore Cache Branch Password
+      #   if: needs.setup.outputs.DB_CHANGES == 'true'
+      #   id: check_cache_pword
+      #   uses: actions/cache/restore@v3
+      #   with:
+      #     path: ./branch-conn-string.txt
+      #     key: ${{ steps.branch_pword.outputs.PWORD_NAME }}-${{ steps.branch_pword.outputs.PWORD_ID }}
+      # key: ${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}
+      # - name: Read Branch Connection String
+      #   run: |
+      #     cat ./branch-conn-string.txt
+      # Warning: this will save the value in bash history, so this is not recommend for secrets.
+      # if there are no DB changes, save the credentials for ffph_dev main branch into branch-conn-string.txt | cache key: dev-admin-pwordid
+      # - name: Check if Pscale DB needs to be reset
+      #   id: db_reset_check
+      #   working-directory: ./my-scripts/pscale/
+      #   run: |
+      #     PR_ACTIVITY_TYPE=${{ github.event.action }}
+      #     DB_CHANGES=${{ needs.setup.outputs.DB_CHANGES }}
+      #     DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
+      #     ERROR_DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
+      #     source ./check-db-reset.sh
+      #     echo "Step Outputs: RESET_DB"
+      # only executes when Pscale DB needs to be reset (prisma db push and seed) during the ff. cases:
+      # if pr!=sync, db changes on PR head branch
+      # if pr==sync, db changes on sync (push commits have additional db changes)
+      # or if pr==sync and there was an error checking for db changes on sync
+      # if: (github.event.action != 'synchronize' && needs.setup.outputs.DB_CHANGES == 'true') || (github.event.action == 'synchronize' && (needs.setup.outputs.DB_CHANGES_ON_PR_SYNC == 'true' || needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC == 'true'))
+      # - name: Install NodeJS
+      #   if: steps.db_reset_check.outputs.RESET_DB == 'true'
+      #   id: install_nodejs
+      #   uses: actions/setup-node@v3
+      #   with:
+      #     node-version: ${{ env.NODE_VERSION }}
+      #     cache: 'npm'
+      #     cache-dependency-path: 'package-lock.json'
+      # if: steps.install_nodejs.outcome == 'success'
+      # - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
+      #   if: steps.db_reset_check.outputs.RESET_DB == 'true'
+      #   id: cache_deps
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ./node_modules
+      #     key: deps-node-modules-${{ hashFiles('package-lock.json') }}
+      # if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
+      # - name: Install dependencies to enable Prisma DB Push and Seed/Reset
+      #   # need to check if cache-hit==false and not if it cache-hit!=true, since if step doesn't execute, no value will be set
+      #   # cache-hit==false doesn't work since action doesn't set it to false if cache miss, so need to also check if step was executed
+      #   if: steps.db_reset_check.outputs.RESET_DB == 'true' && steps.cache_deps.outputs.cache-hit != 'true'
+      #   id: install_deps
+      #   run: npm ci
+      # better to use "npm ci" vs installing selected dev deps, since action/cache won't work on selected installs (due to differing hashFiles(pkg-lock.json) values) and action/cache install speeds up when used after actions/setup-node@v3 (they have the same hashFiles() value)
+      # run: npm install -D prisma ts-node tsconfig-paths
+      # should only run if step: install_nodejs was successfully executed, in order to reset the db
+      # if: steps.install_nodejs.outcome == 'success'
+      # if: false
+      # - name: Prisma DB Push & DB Seed/Reset
+      #   if: steps.db_reset_check.outputs.RESET_DB == 'true'
+      #   run: |
+      #     export DATABASE_URL=$(cat ./branch-conn-string.txt)
+      #     DATABASE_URL="${DATABASE_URL}" npm run db:reset
       - name: Vercel CLI Setup & Vercel Env Var DATABASE_URL check
         id: vercel_setup
         run: |
@@ -592,6 +705,11 @@ jobs:
         if: steps.vercel_setup.outputs.DATABASE_URL_EXISTS == 'true'
         run: vercel env rm --yes DATABASE_URL ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME --token ${{ secrets.VERCEL_TOKEN }}
 
+      - name: Download Planetscale connection string
+        uses: actions/download-artifact@v3
+        with:
+          name: branch-conn-string
+          path: ./
       - name: Add DATABASE_URL to Vercel's Env Vars for the Github Branch
         run: vercel env add DATABASE_URL ${{ env.VERCEL_ENV }} $GITHUB_BRANCH_NAME --token ${{ secrets.VERCEL_TOKEN }} < "./branch-conn-string.txt"
 
