@@ -195,7 +195,9 @@ jobs:
       # ENABLE THIS AFTER TESTING!!!!!!!!!!!!!!!!!!!!!!!!
       - name: Prisma DB Push & DB Seed/Reset
         # if: false
-        run: DATABASE_URL=${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} npm run db:reset
+        run: DATABASE_URL=${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} prisma db seed
+
+      # run: DATABASE_URL=${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} npm run db:reset
 
       # need to check DR if State=closed??? we can already delete it right away
       # only delete pscale branch if STATE=closed and DEPLOY_STATE=complete ??? or just delete w/o checking
