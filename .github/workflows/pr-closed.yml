@@ -110,7 +110,6 @@ jobs:
       PSCALE_BRANCH_NAME: ${{ needs.setup-pr-closed-dev.outputs.PSCALE_BRANCH_NAME }}
       EXISTING_PWORD_NAME: ${{ needs.setup-pr-closed-dev.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ needs.setup-pr-closed-dev.outputs.EXISTING_PWORD_ID }}
-      # DB_CHANGES: ${{ needs.setup-pr-closed-dev.outputs.DB_CHANGES }}
     steps:
       - name: Check github context
         run: |
@@ -134,43 +133,43 @@ jobs:
       # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
       # if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == true
       # if: steps.deploy_dr.outcome == 'success'
-      - name: Deploy Pscale Deploy Request
-        if: steps.existing_dr.outputs.DR_EXISTS == 'true' && github.event.pull_request.merged == true
-        id: deploy_dr
-        working-directory: ./.pscale/cli-helper-scripts/
-        run: |
-          RETRIES=10
-          MAX_TIMEOUT=60
-
-          source ./use-pscale-docker-image.sh
-          source ./wait-for-deploy-request-merged.sh
-
-          pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }}
-
-          wait_for_deploy_request_merged $RETRIES ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} ${{ env.PSCALE_ORG_NAME }} $MAX_TIMEOUT
-
-          if [ $? -ne 0 ]; then
-            echo "Error: wait_for_deploy_request_merged returned non-zero exit code"
-            echo "Check out the deploy request status at $deploy_request"
-            exit 5
-          else
-            echo "Check out the deploy request at $deploy_request"
-          fi
-
-        # run: pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
-
-      #  best to use this, since no need for a separate step to wait for deployment
-      # - name: Deploy deploy request
+      # - name: Deploy Pscale Deploy Request
       #   if: steps.existing_dr.outputs.DR_EXISTS == 'true' && github.event.pull_request.merged == true
       #   id: deploy_dr
-      #   uses: planetscale/deploy-deploy-request-action@v3
-      #   with:
-      #     org_name: ${{ env.PSCALE_ORG_NAME }}
-      #     database_name: ${{ env.PSCALE_DB_NAME }}
-      #     number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
-      #     wait: true
+      #   working-directory: ./.pscale/cli-helper-scripts/
+      #   run: |
+      #     RETRIES=10
+      #     MAX_TIMEOUT=60
+
+      #     source ./use-pscale-docker-image.sh
+      #     source ./wait-for-deploy-request-merged.sh
+
+      #     pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }}
+
+      #     wait_for_deploy_request_merged $RETRIES ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} ${{ env.PSCALE_ORG_NAME }} $MAX_TIMEOUT
+
+      #     if [ $? -ne 0 ]; then
+      #       echo "Error: wait_for_deploy_request_merged returned non-zero exit code"
+      #       echo "Check out the deploy request status at $deploy_request"
+      #       exit 5
+      #     else
+      #       echo "Check out the deploy request at $deploy_request"
+      #     fi
+
+      # run: pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
+
+      #  best to use this, since no need for a separate step to wait for deployment
+      - name: Deploy deploy request
+        if: steps.existing_dr.outputs.DR_EXISTS == 'true' && github.event.pull_request.merged == true
+        id: deploy_dr
+        uses: planetscale/deploy-deploy-request-action@v3
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
+          wait: true
       - name: Skip Revert Pscale Deploy Request
-        # if: steps.deploy_dr.outcome == 'success' && github.base_ref == 'merge'
+        # have to check if deploy_dr step executed successfully since can be skipped if no existing DR
         if: steps.deploy_dr.outcome == 'success' && github.base_ref == 'merge'
         run: pscale deploy-request skip-revert ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
       - name: Install NodeJS
@@ -179,19 +178,28 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-      - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
-        if: steps.install_nodejs.outcome == 'success'
-        id: cache_deps
-        uses: actions/cache@v3
-        with:
-          path: ./node_modules
-          key: deps-node-modules-${{ hashFiles('package-lock.json') }}
-      - name: Install dependencies to enable Prisma DB Push and Seed/Reset
-        if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
+          # cache: 'npm'
+          # cache-dependency-path: 'package-lock.json'
+
+          # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
+
+      # don't use actions/cache since we don't want to store a cache when pr is closed and have to manually delete it later
+      # - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
+      #   if: steps.install_nodejs.outcome == 'success'
+      #   id: cache_deps
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ./node_modules
+      #     key: deps-node-modules-${{ hashFiles('package-lock.json') }}
+      # if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
+      - name: Install dependencies to enable Prisma DB Seed and Cache Cleanup
         id: install_deps
         run: npm ci
+
+        # better to use "npm ci" so that we get the correct cache keys for pkg-lock.json to delete them on the last step of this workflow
+        # pkg-lock.json is dependent on what is installed
+        # run: npm install prisma ts-node tsconfig-paths
+
       - name: Prisma DB Push & DB Seed/Reset
         run: DATABASE_URL=${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} npx prisma db seed
 
@@ -216,7 +224,7 @@ jobs:
       - name: Delete Pscale Branch
         if: steps.dr_state.outputs.DR_STATE == 'closed'
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
-      - name: Delete Caches created by the Opened PR Workflow
+      - name: Cache Cleanup (delete caches created by the Opened PR Workflow)
         run: |
           curl -L \
           -X DELETE \
