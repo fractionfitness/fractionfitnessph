@@ -1,0 +1,80 @@
+name: Approve Planetscale Deploy Request
+
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 18.13.0
+
+jobs:
+  pscale-dr-approve:
+    runs-on: ubuntu-latest
+    environment: Preview
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+    steps:
+      # - name: Check github context values
+      #   run: |
+      #     echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+      #     cat "$GITHUB_EVENT_PATH"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Make shell scripts executable
+        run: chmod -R +x ./my-scripts/pscale/
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Get Shortened Github Branch Name
+        id: shortened_gh_branch_name
+        working-directory: ./my-scripts/pscale/
+        run: |
+          GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          GITHUB_PR_NUMBER=""
+
+          ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
+
+          echo "Step Outputs: SHORTENED_GH_BRANCH_NAME / PSCALE_BRANCH_NAME"
+
+      # we don't know the Github branch's corresponding PR number
+
+      - name: Get Pscale Branch Name (w/o knowing the PR number)
+        id: branch_name
+        working-directory: ./my-scripts/pscale/
+        run: |
+          output=$(eval "pscale branch list ${{ env.PSCALE_DB_NAME }} --org ${{ env.PSCALE_ORG_NAME }} | grep -w \"${{ steps.shortened_gh_branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}\" | awk -F' ' '{print \$1}' " 2>&1)
+
+          echo "PSCALE_BRANCH_NAME=$output" >> "$GITHUB_OUTPUT"
+
+          echo "Step Outputs: PSCALE_BRANCH_NAME"
+      - name: Get Pscale DR info for Branch, if exists
+        id: existing_dr
+        working-directory: ./my-scripts/pscale/
+        run: |
+          ./check-dr-exists.sh ${{ env.PSCALE_DB_NAME }} ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }} ${{ env.PSCALE_ORG_NAME }}
+
+          echo "EXISTS: $EXISTS"
+          echo "DR_EXISTS: $DR_EXISTS"
+
+          echo "Step Outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+
+      # no need to do this since it will "pscale deploy-request review" will error out if nonexistent DR or any other errors
+      # - name: Stop workflow and error out if Pscale DR does not exist
+      #   run: |
+      #     DR_EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
+      #     DR_NUMBER=${{ steps.existing_dr.outputs.DR_NUMBER }}
+      #     GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+
+      #     if [ "$DR_EXISTS" == "true" ]; then
+      #       echo "Pscale DR (number: ${DR_NUMBER}) exists for the Github Branch ($GITHUB_BRANCH_NAME)"
+      #       exit 0
+      #     else
+      #       echo "Pscale DR does not exist for the Github Branch ($GITHUB_BRANCH_NAME)"
+      #       exit 1
+      #     fi
+
+      - name: Approve Pscale Deploy Request
+        if: steps.existing_dr.outputs.DR_EXISTS == 'true'
+        run: |
+          pscale deploy-request review ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --approve
