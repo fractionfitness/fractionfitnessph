@@ -437,7 +437,8 @@ jobs:
   prechecks-deploy:
     needs: [setup, pscale-create-branch-pword-dr]
     # pscale-create-branch-pword-dr job will be skipped on PR synchronize
-    if: always() && needs.pscale-create-branch-pword-dr.result == 'success' || 'skipped'
+    # if: needs.pscale-create-branch-pword-dr.result == 'success' || 'skipped'
+    if: ${{ !failure() }}
     runs-on: ubuntu-latest
     environment: Preview
     env:
@@ -519,7 +520,7 @@ jobs:
           echo "Step Outputs: RESET_DB"
 
   pscale-db-reset:
-    if: always() && needs.prechecks-deploy.outputs.RESET_DB == 'true'
+    if: ${{ !failure() && needs.prechecks-deploy.outputs.RESET_DB == 'true' }}
     needs: prechecks-deploy
     runs-on: ubuntu-latest
     environment: Preview
@@ -569,7 +570,7 @@ jobs:
 
   vercel-deploy:
     needs: [prechecks-deploy, setup]
-    if: always() && needs.prechecks-deploy.result == 'success'
+    if: ${{ !failure() }}
     runs-on: ubuntu-latest
     environment: Preview
     env:
