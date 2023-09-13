@@ -13,9 +13,9 @@ SEMVER_REGEX='^[0-9]*\.[0-9]{1,2}\.[0-9]{1,2}'
 BRANCH_TYPE=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{print $1}')
 REF_NUM=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{print $2}')
 
-if [ $BRANCH_TYPE == "staging" ]; then
+if [ "$BRANCH_TYPE" == "staging" ]; then
   # it is a staging branch with the naming convention: "staging-semver"
-  echo "$GITHUB_BRANCH_NAME (staging) branch"
+  echo "$GITHUB_BRANCH_NAME github branch (staging)"
   if [[ "${REF_NUM}" =~ ${SEMVER_REGEX} ]]; then
 
   # only gets staging-semver
@@ -32,7 +32,7 @@ if [ $BRANCH_TYPE == "staging" ]; then
 
 else
   # it is a feat branch with the naming convention "feat-issueref-description"
-  echo "$GITHUB_BRANCH_NAME (feat/fix/refactor/cicd/chore/etc.) branch"
+  echo "$GITHUB_BRANCH_NAME github branch (feat/fix/refactor/cicd/chore/etc.)"
 
   # check if it is a number and not 'noref'
   # do not enclose NUMERIC_REGEX in "" because it will treat the regex as a string

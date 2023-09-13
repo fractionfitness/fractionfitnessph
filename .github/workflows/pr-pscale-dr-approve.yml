@@ -1,0 +1,80 @@
+name: Approve Planetscale Deploy Request for Github Branch PRs into Dev/Main
+
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 18.13.0
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      GITHUB_BRANCH_NAME: ${{ steps.gh_branch_pr_target.outputs.GITHUB_BRANCH_NAME }}
+      GITHUB_PR_TARGET_BRANCH: ${{ steps.gh_branch_pr_target.outputs.GITHUB_PR_TARGET_BRANCH }}
+    steps:
+      # - name: Check github context values
+      #   run: |
+      #     echo "GITHUB_REF: $GITHUB_REF"
+      #     echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
+      #     echo "GITHUB_REF#refs/heads/: ${GITHUB_REF#refs/heads/}"
+      #     echo "github.event.action ${{ github.event.action }}"
+      #     echo "github.event.workflow_dispatch.ref ${{ github.event.workflow_dispatch.ref }}"
+      #     echo "github.context ${{ github.context }}"
+      #     echo "github.ref ${{ github.ref }}"
+      #     echo "github.ref 1 ${{ github.ref }}#refs/heads/"
+      #     echo "github.ref 2 ${${{ github.ref }}#refs/heads/}"
+      #     TEST=${{ github.ref }}
+      #     echo "github.ref 3 ${TEST#refs/heads/}"
+      #     echo "github.event ${{ github.event }}"
+      #     echo "github.event ${{ toJson(github.event) }}"
+      #     echo "github.event.ref ${{ github.event.ref }}"
+      #     echo "HEAD_REF AND REF: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+      #     echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+      #     cat "$GITHUB_EVENT_PATH"
+
+      - name: Get Github Branch w/c triggered this workflow and determine target/base branch for the corresponding Pull Request
+        id: gh_branch_pr_target
+        run: |
+          GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+
+          output=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -w \"staging\" || true ")
+          if [ "$output" == "staging" ]; then
+            GITHUB_PR_TARGET_BRANCH="main"
+          else
+            GITHUB_PR_TARGET_BRANCH="dev"
+          fi
+
+          echo "GITHUB_BRANCH_NAME: $GITHUB_BRANCH_NAME"
+          echo "GITHUB_PR_TARGET_BRANCH: $GITHUB_PR_TARGET_BRANCH"
+          echo "GITHUB_BRANCH_NAME=${GITHUB_BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+          echo "GITHUB_PR_TARGET_BRANCH=$GITHUB_PR_TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+
+        # GITHUB_PR_TARGET_BRANCH="merge"
+
+  # pr-into-merge:
+  # if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'merge'
+
+  pr-into-dev:
+    if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'dev'
+    needs: setup
+    uses: ./.github/workflows/pscale-dr-approve.yml
+    with:
+      gh-environment: Preview
+      gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
+      gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
+    secrets:
+      pscale-token-id: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+
+  pr-into-main:
+    if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'main'
+    needs: setup
+    uses: ./.github/workflows/pscale-dr-approve.yml
+    with:
+      gh-environment: Production
+      gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
+      gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
+    secrets:
+      pscale-token-id: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PSCALE_SERVICE_TOKEN }}
