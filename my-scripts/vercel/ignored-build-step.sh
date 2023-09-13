@@ -56,7 +56,7 @@ if [[ "$VERCEL_GIT_COMMIT_REF" == "main" || "$VERCEL_GIT_COMMIT_REF" == "dev" ||
   echo "VERCEL_GIT_COMMIT_SHA ${VERCEL_GIT_COMMIT_SHA}"
   echo "VERCEL_GIT_PULL_REQUEST_ID ${VERCEL_GIT_PULL_REQUEST_ID}"
   echo "✅ - Build can proceed"
-  exit 1;
+  exit 0;
 else
   # Don't build
   echo "🛑 - Build cancelled"
