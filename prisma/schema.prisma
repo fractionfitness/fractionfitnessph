@@ -205,3 +205,13 @@ model Tester6 {
   id   Int    @id @default(autoincrement())
   name String
 }
+
+model Tester7 {
+  id   Int    @id @default(autoincrement())
+  name String
+}
+
+model Tester8 {
+  id   Int    @id @default(autoincrement())
+  name String
+}
