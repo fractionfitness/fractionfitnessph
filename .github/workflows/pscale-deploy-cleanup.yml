@@ -1,23 +1,42 @@
-name: Closed PR into Dev/Main (Merged / Unmerged)
+name: Planetscale Cleanup (Delete Branch)
 
 on:
-  workflow_dispatch:
-  pull_request:
-    branches: [dev, main, merge]
-    types: [closed]
+  workflow_call:
+    inputs:
+      gh-environment:
+        description: Github environment
+        required: true
+        type: string
+      # gh-branch:
+      #   description: Github Branch w/c triggered calling workflow
+      #   required: true
+      #   type: string
+      # gh-pr-target:
+      #   description: Github Pull Request Target Branch
+      #   required: true
+      #   type: string
+      # gh-pr-base-ref:
+      #   description: Github Base Branch for PR Event
+      #   required: true
+      #   type: string
+    secrets:
+      pscale-token:
+        required: true
+      pscale-token-id:
+        required: true
+      pscale-src-branch-db-url:
+        required: true
 
 env:
   NODE_VERSION: 18.13.0
 
 jobs:
-  setup-pr-closed-dev:
-    # if: github.base_ref == 'dev'
-    if: github.base_ref == 'merge'
+  setup:
     runs-on: ubuntu-latest
-    environment: Preview
+    environment: ${{ inputs.gh-environment }}
     env:
-      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.pscale-token-id }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
       PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
@@ -34,10 +53,9 @@ jobs:
           echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
           echo "github.head_ref ${{ github.head_ref }}"
           echo "github.base_ref ${{ github.base_ref }}"
-          echo "github.event.pull_request.base.ref ${{ github.event.pull_request.merge_commit_sha }} "
+          echo "github.event.pull_request.merge_commit_sha ${{ github.event.pull_request.merge_commit_sha }} "
           echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
           echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
-        # cat $GITHUB_EVENT_PATH
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -58,8 +76,7 @@ jobs:
           echo "DB_CHANGES=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
           echo "ERROR=${ERROR}" >> "${GITHUB_OUTPUT}"
 
-      # COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
-
+        # COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
       - name: Planetscale Setup
         if: steps.db_changes.outputs.DB_CHANGES == 'true'
         id: pscale_setup
@@ -70,7 +87,7 @@ jobs:
         working-directory: ./my-scripts/pscale/
         shell: bash
         run: |
-          GITHUB_BRANCH_NAME=${{ github.head_ref }}
+          GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
 
           ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
@@ -83,7 +100,7 @@ jobs:
         working-directory: ./my-scripts/pscale/
         run: |
           PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
-          PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${PSCALE_PWORD_ROLE}
+          PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${{ env.PSCALE_PWORD_ROLE }}
 
           source ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
 
@@ -94,31 +111,57 @@ jobs:
           echo "EXISTING_PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
           echo "EXISTING_PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
 
-  # no need to check pull_request activity type if closed
-  # if: github.base_ref == 'dev' && github.event.pull_request.state == 'closed' && github.event.pull_request.merged == false
-  # if: github.base_ref == 'dev' && needs.setup-pr-closed-dev.outputs.DB_CHANGES == 'true'
-  pscale-cleanup-pr-dev:
-    if: github.base_ref == 'merge' && needs.setup-pr-closed-dev.outputs.DB_CHANGES == 'true'
-    needs: setup-pr-closed-dev
+  pscale-deploy-cleanup:
+    if: needs.setup.outputs.DB_CHANGES == 'true'
+    needs: setup
     runs-on: ubuntu-latest
-    environment: Preview
+    environment: ${{ inputs.gh-environment }}
     env:
-      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.pscale-token-id }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
-      PSCALE_BRANCH_NAME: ${{ needs.setup-pr-closed-dev.outputs.PSCALE_BRANCH_NAME }}
-      EXISTING_PWORD_NAME: ${{ needs.setup-pr-closed-dev.outputs.EXISTING_PWORD_NAME }}
-      EXISTING_PWORD_ID: ${{ needs.setup-pr-closed-dev.outputs.EXISTING_PWORD_ID }}
+      PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
+      EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
+      EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
     steps:
       - name: Check github context
         run: |
           echo "github.base_ref ${{ github.base_ref }}"
-          echo "needs.setup-pr-closed-dev.outputs.DB_CHANGES ${{ needs.setup-pr-closed-dev.outputs.DB_CHANGES }}"
+          echo "needs.setup.outputs.DB_CHANGES ${{ needs.setup.outputs.DB_CHANGES }}"
           echo "github.event.pull_request.merged ${{ github.event.pull_request.merged }}"
           echo "github.repository: ${{ github.repository }}"
       - name: Checkout repository
         uses: actions/checkout@v3
+      # always run this, even if pr was not merged, to be able to clean up cache
+      - name: Install NodeJS
+        id: install_nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # cache: 'npm'
+          # cache-dependency-path: 'package-lock.json'
+
+          # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
+
+      # don't use actions/cache since we don't want to store a cache when pr is closed and have to manually delete it later
+      - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
+        if: steps.install_nodejs.outcome == 'success'
+        id: cache_deps
+        uses: actions/cache/restore@v3
+        with:
+          path: ./node_modules
+          key: deps-node-modules-${{ hashFiles('package-lock.json') }}
+      # if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
+      # always run this, even if pr was not merged, to be able to clean up cache
+      - name: Install dependencies to enable Prisma DB Seed and Cache Cleanup
+        if: steps.cache_deps.outputs.cache-hit != 'true'
+        id: install_deps
+        run: npm ci
+
+        # better to use "npm ci" so that we get the correct cache keys for pkg-lock.json to delete them on the last step of this workflow
+        # pkg-lock.json is dependent on what is installed
+        # run: npm install prisma ts-node tsconfig-paths
       - name: Planetscale Setup
         id: pscale_setup
         uses: planetscale/setup-pscale-action@v1
@@ -140,14 +183,10 @@ jobs:
       #   run: |
       #     RETRIES=10
       #     MAX_TIMEOUT=60
-
       #     source ./use-pscale-docker-image.sh
       #     source ./wait-for-deploy-request-merged.sh
-
       #     pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }}
-
       #     wait_for_deploy_request_merged $RETRIES ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} ${{ env.PSCALE_ORG_NAME }} $MAX_TIMEOUT
-
       #     if [ $? -ne 0 ]; then
       #       echo "Error: wait_for_deploy_request_merged returned non-zero exit code"
       #       echo "Check out the deploy request status at $deploy_request"
@@ -155,12 +194,10 @@ jobs:
       #     else
       #       echo "Check out the deploy request at $deploy_request"
       #     fi
-
       # run: pscale deploy-request deploy ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
-
-      #  best to use this, since no need for a separate step to wait for deployment
+      #  best to use this, since no need for a separate step to wait for deployment, compared to commented-out previous step
       - name: Deploy deploy request
-        if: steps.existing_dr.outputs.DR_EXISTS == 'true' && github.event.pull_request.merged == true
+        if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_EXISTS == 'true'
         id: deploy_dr
         uses: planetscale/deploy-deploy-request-action@v3
         with:
@@ -168,62 +205,45 @@ jobs:
           database_name: ${{ env.PSCALE_DB_NAME }}
           number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
           wait: true
-      - name: Skip Revert Pscale Deploy Request
+
+        # if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_EXISTS == 'true' && github.base_ref == 'dev'
         # have to check if deploy_dr step executed successfully since can be skipped if no existing DR
-        if: steps.deploy_dr.outcome == 'success' && github.base_ref == 'merge'
+      - name: Skip Revert Pscale Deploy Request
+        if: ${{ steps.deploy_dr.outcome == 'success' && (github.base_ref == 'merge' || github.base_ref == 'dev') }}
         run: pscale deploy-request skip-revert ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
-      - name: Install NodeJS
-        if: steps.deploy_dr.outcome == 'success'
-        id: install_nodejs
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          # cache: 'npm'
-          # cache-dependency-path: 'package-lock.json'
-
-          # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
-
-      # don't use actions/cache since we don't want to store a cache when pr is closed and have to manually delete it later
-      # - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
-      #   if: steps.install_nodejs.outcome == 'success'
-      #   id: cache_deps
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ./node_modules
-      #     key: deps-node-modules-${{ hashFiles('package-lock.json') }}
-      # if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
-      - name: Install dependencies to enable Prisma DB Seed and Cache Cleanup
-        id: install_deps
-        run: npm ci
-
-        # better to use "npm ci" so that we get the correct cache keys for pkg-lock.json to delete them on the last step of this workflow
-        # pkg-lock.json is dependent on what is installed
-        # run: npm install prisma ts-node tsconfig-paths
-
-      - name: Prisma DB Push & DB Seed/Reset
-        run: DATABASE_URL=${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} npx prisma db seed
-
-      # run: DATABASE_URL=${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }} npm run db:reset
 
       # need to check DR if State=closed??? we can already delete it right away
       # only delete pscale branch if STATE=closed and DEPLOY_STATE=complete ??? or just delete w/o checking
       # need to check since for gh main branch, we do manual deploy-request apply, skip-revert, and "branch delete" and so that this workflow is more flexible and reusable
       - name: Close Pscale Deploy Request
-        if: steps.existing_dr.outcome == 'success' && github.event.pull_request.merged == false
+        if: github.event.pull_request.merged == false && steps.existing_dr.outputs.DR_EXISTS == 'true'
         run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
 
       # should always run
-      - name: Check existing Pscale DR STATE and DEPLOY_STATE
+      - name: Check existing Pscale DR_STATE if 'closed' and DR_DEPLOY_STATE is 'complete'
+        if: steps.existing_dr.outputs.DR_EXISTS == 'true'
         id: dr_state
         working-directory: ./my-scripts/pscale/
         run: |
           ./check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_BRANCH_NAME}" "${PSCALE_ORG_NAME}"
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
-      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not)
+
+        # NOTE: MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
+        # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? DR_STATE looks to be sufficient since we already check if steps.deploy_dr.outcome=success and it will wait until DR deployment has completed/merged before exiting
+        # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
+      - name: Prisma DB Push & DB Seed/Reset
+        if: ${{ steps.deploy_dr.outcome == 'success' && (github.base_ref == 'merge' || github.base_ref == 'dev') }}
+        run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npx prisma db seed
+
+        # run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npm run db:reset
+
+      # should always run when pull_request is closed (whether merged or not) and (DR_STATE is closed (whether DEPLOY_State=complete or not) OR when DR is nonexistent)
+      # steps.existing_dr.outputs.DR_EXISTS == 'false' is redundant since there will always be a DR if DB_CHANGES=true
       - name: Delete Pscale Branch
-        if: steps.dr_state.outputs.DR_STATE == 'closed'
+        if: steps.dr_state.outputs.DR_STATE == 'closed' || steps.existing_dr.outputs.DR_EXISTS == 'false'
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
+
       - name: Cache Cleanup (delete caches created by the Opened PR Workflow)
         run: |
           curl -L \
@@ -246,33 +266,3 @@ jobs:
           -H "Authorization: Bearer ${{ github.token }}" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=deps-node-modules-${{ hashFiles('package-lock.json') }}"
-
-  # vercel-deploy-dev:
-  #   if: github.base_ref == 'dev' && github.event.pull_request.merged == true && needs.setup-pr-closed-dev.outputs.DB_CHANGES == 'true'
-  #   needs: setup-pr-closed-dev
-  #   runs-on: ubuntu-latest
-  #   environment: Preview
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
-  #     - name: Make shell scripts executable
-  #       run: chmod -R +x ./.pscale/cli-helper-scripts/ ./my-scripts/
-  # prisma db push can be placed in pscale-cleanup
-  # vercel automatically deploys on commits to dev and main so this job is not needed
-
-  # setup-pr-closed-main:
-  #   if: github.base_ref == 'main'
-  #   runs-on: ubuntu-latest
-  #   environment: production
-
-  # pscale-cleanup-pr-main:
-  #   if: github.base_ref == 'main'
-  #   needs: setup-pr-closed-main
-  #   runs-on: ubuntu-latest
-  #   environment: production
-
-  # vercel-deploy-main:
-  #   if: github.base_ref == 'main' && github.event.pull_request.merged == true
-  #   needs: setup-pr-closed-main
-  #   runs-on: ubuntu-latest
-  #   environment: production
