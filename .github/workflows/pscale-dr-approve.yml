@@ -92,16 +92,19 @@ jobs:
         id: dr_approvable
         run: |
           DR_STATE=${{ steps.existing_dr.outputs.DR_STATE }}
+          DR_APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
           DR_DEPLOY_STATE=${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
           DR_DEPLOYABLE=${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
 
           if [[ "$DR_STATE" == "open" && "$DR_APPROVED" == "Yes" ]]; then
             echo "Planetscale Deploy Request is already approved."
             APPROVE_DR="false"
+            echo "APPROVE_DR=${APPROVE_DR}" >> "${GITHUB_OUTPUT}"
             exit 0
-          elif [[ "$DR_STATE" == "open" && "$DR_APPROVED" == "Yes" && "$DR_DEPLOY_STATE" == "ready" && "$DR_DEPLOYABLE" == "Yes" ]]; then
+          elif [[ "$DR_STATE" == "open" && "$DR_APPROVED" == "No" && "$DR_DEPLOY_STATE" == "ready" && "$DR_DEPLOYABLE" == "Yes" ]]; then
             echo "Planetscale Deploy Request can be approved."
             APPROVE_DR="true"
+            echo "APPROVE_DR=${APPROVE_DR}" >> "${GITHUB_OUTPUT}"
             exit 0
           else
             if [ "$DR_STATE" == "closed" ]; then
@@ -119,7 +122,6 @@ jobs:
           fi
 
           echo "APPROVE_DR: ${APPROVE_DR}"
-          echo "APPROVE_DR=${APPROVE_DR}" >> "${GITHUB_OUTPUT}"
 
       # no need since we have a previous step that will error out if DR is nonexistent
       # if: steps.existing_dr.outputs.DR_EXISTS == 'true'
