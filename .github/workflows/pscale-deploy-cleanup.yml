@@ -125,12 +125,12 @@ jobs:
       EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
     steps:
-      - name: Check github context
-        run: |
-          echo "github.base_ref ${{ github.base_ref }}"
-          echo "needs.setup.outputs.DB_CHANGES ${{ needs.setup.outputs.DB_CHANGES }}"
-          echo "github.event.pull_request.merged ${{ github.event.pull_request.merged }}"
-          echo "github.repository: ${{ github.repository }}"
+      # - name: Check github context
+      #   run: |
+      #     echo "github.base_ref ${{ github.base_ref }}"
+      #     echo "needs.setup.outputs.DB_CHANGES ${{ needs.setup.outputs.DB_CHANGES }}"
+      #     echo "github.event.pull_request.merged ${{ github.event.pull_request.merged }}"
+      #     echo "github.repository: ${{ github.repository }}"
       - name: Checkout repository
         uses: actions/checkout@v3
       # always run this, even if pr was not merged, to be able to clean up cache
@@ -144,16 +144,14 @@ jobs:
 
           # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
 
-      # don't use actions/cache since we don't want to store a cache when pr is closed and have to manually delete it later
+      # always run this, even if pr was not merged, to be able to clean up cache
+      # only use actions/cache/restore since we don't want to store a cache when pr is closed and have to manually delete it later
       - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
-        if: steps.install_nodejs.outcome == 'success'
         id: cache_deps
         uses: actions/cache/restore@v3
         with:
           path: ./node_modules
           key: deps-node-modules-${{ hashFiles('package-lock.json') }}
-      # if: steps.cache_deps.outcome == 'success' && steps.cache_deps.outputs.cache-hit != 'true'
-      # always run this, even if pr was not merged, to be able to clean up cache
       - name: Install dependencies to enable Prisma DB Seed and Cache Cleanup
         if: steps.cache_deps.outputs.cache-hit != 'true'
         id: install_deps
@@ -229,8 +227,8 @@ jobs:
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
-        # NOTE: MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
-        # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? DR_STATE looks to be sufficient since we already check if steps.deploy_dr.outcome=success and it will wait until DR deployment has completed/merged before exiting
+        # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
+        # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting
         # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
       - name: Prisma DB Push & DB Seed/Reset
         if: ${{ steps.deploy_dr.outcome == 'success' && (github.base_ref == 'merge' || github.base_ref == 'dev') }}
