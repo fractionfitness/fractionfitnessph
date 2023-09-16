@@ -64,8 +64,8 @@ jobs:
       gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
       gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
     secrets:
-      pscale-token-id: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 
   pr-into-main:
     if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'main'
@@ -76,5 +76,5 @@ jobs:
       gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
       gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
     secrets:
-      pscale-token-id: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}

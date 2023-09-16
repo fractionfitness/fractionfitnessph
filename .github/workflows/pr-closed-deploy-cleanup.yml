@@ -19,8 +19,8 @@ jobs:
       # gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
       # gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
     secrets:
-      pscale-token-id: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-src-branch-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
 
   pr-into-main:
@@ -29,8 +29,8 @@ jobs:
     with:
       gh-environment: Production
     secrets:
-      pscale-token-id: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-src-branch-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
 # jobs:
 #   setup-pr-closed-dev:
@@ -39,8 +39,8 @@ jobs:
 #     runs-on: ubuntu-latest
 #     environment: Preview
 #     env:
-#       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-#       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+#       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+#       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 #       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
 #       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
 #       PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
@@ -126,8 +126,8 @@ jobs:
 #     runs-on: ubuntu-latest
 #     environment: Preview
 #     env:
-#       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PSCALE_SERVICE_TOKEN_ID }}
-#       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PSCALE_SERVICE_TOKEN }}
+#       PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+#       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 #       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
 #       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
 #       PSCALE_BRANCH_NAME: ${{ needs.setup-pr-closed-dev.outputs.PSCALE_BRANCH_NAME }}
