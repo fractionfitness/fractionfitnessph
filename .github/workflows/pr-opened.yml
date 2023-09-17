@@ -547,7 +547,7 @@ jobs:
   #         DB_CHANGES_ON_PR_SYNC=${{ env.DB_CHANGES_ON_PR_SYNC }}
   #         ERROR_DB_CHANGES_ON_PR_SYNC=${{ env.ERROR_DB_CHANGES_ON_PR_SYNC }}
 
-  #         source ./check-db-reset.sh
+  #         source ./check-reset.sh
 
   #         echo "Step Outputs: RESET_DB"
 
@@ -661,7 +661,7 @@ jobs:
   #     #     DB_CHANGES=${{ needs.setup.outputs.DB_CHANGES }}
   #     #     DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
   #     #     ERROR_DB_CHANGES_ON_PR_SYNC=${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
-  #     #     source ./check-db-reset.sh
+  #     #     source ./check-reset.sh
   #     #     echo "Step Outputs: RESET_DB"
   #     # only executes when Pscale DB needs to be reset (prisma db push and seed) during the ff. cases:
   #     # if pr!=sync, db changes on PR head branch
