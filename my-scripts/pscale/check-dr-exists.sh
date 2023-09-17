@@ -10,7 +10,7 @@
 output=$(eval " pscale deploy-request show $1 $2 --org $3 | grep -w \"$2[ $]\" " 2>&1)
 exit_status=$?
 echo "exit_status $exit_status"
-echo "output of pscale password list: ${output}"
+echo "output of pscale deploy-request show: ${output}"
 
 if [ $exit_status -eq 0 ]; then
   echo "Deploy Request exists on Planetscale $1 (Database) $2 (Branch)"

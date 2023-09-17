@@ -4,7 +4,7 @@ if [ "$EXISTS" != "true" ]; then
   echo "Planetscale Deploy Request does not exist yet..."
   exit 1
 elif [[ "$EXISTS" == "true" && "$STATE" == "open" && "$APPROVED" == "Yes" && "$DEPLOYMENT_STATE" == "ready" && "$DEPLOYABLE" == "Yes" ]]; then
-  echo "Planetscale Deploy Request is ready for Deployment"
+  echo "Planetscale Deploy Request is approved and ready for Deployment"
   exit 0
 else
   echo "Resolve the following Planetscale Deploy Request Issues:"
