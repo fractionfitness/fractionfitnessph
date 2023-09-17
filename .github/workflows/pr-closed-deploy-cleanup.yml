@@ -1,4 +1,4 @@
-name: Closed PR into Dev/Main (Merged / Unmerged)
+name: Closed PR (main/dev - merged/unmerged)
 
 on:
   pull_request:
@@ -9,21 +9,27 @@ env:
   NODE_VERSION: 18.13.0
 
 jobs:
-  # pr-into-dev:
-  pr-into-merge:
-    # if: github.base_ref == 'dev'
+  merge:
     if: github.base_ref == 'merge'
     uses: ./.github/workflows/pscale-deploy-cleanup.yml
     with:
       gh-environment: Preview
-      # gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
-      # gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
     secrets:
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-src-branch-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
 
-  pr-into-main:
+  dev:
+    if: github.base_ref == 'dev'
+    uses: ./.github/workflows/pscale-deploy-cleanup.yml
+    with:
+      gh-environment: Preview
+    secrets:
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+      pscale-src-branch-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+
+  main:
     if: github.base_ref == 'main'
     uses: ./.github/workflows/pscale-deploy-cleanup.yml
     with:

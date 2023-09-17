@@ -1,4 +1,4 @@
-name: Planetscale Cleanup (Delete Branch)
+name: Planetscale Deploy + Cleanup (Deploy DR, Delete Branch, DB Seed, Delete GH Caches)
 
 on:
   workflow_call:
@@ -7,18 +7,6 @@ on:
         description: Github environment
         required: true
         type: string
-      # gh-branch:
-      #   description: Github Branch w/c triggered calling workflow
-      #   required: true
-      #   type: string
-      # gh-pr-target:
-      #   description: Github Pull Request Target Branch
-      #   required: true
-      #   type: string
-      # gh-pr-base-ref:
-      #   description: Github Base Branch for PR Event
-      #   required: true
-      #   type: string
     secrets:
       pscale-token:
         required: true
@@ -230,7 +218,7 @@ jobs:
         # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
         # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting
         # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
-      - name: Prisma DB Push & DB Seed/Reset
+      - name: Prisma DB Seed
         if: ${{ steps.deploy_dr.outcome == 'success' && (github.base_ref == 'merge' || github.base_ref == 'dev') }}
         run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npx prisma db seed
 

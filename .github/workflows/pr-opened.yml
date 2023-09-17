@@ -1,4 +1,4 @@
-name: Opened PR into Dev/Main
+name: Opened PR (main/dev)
 
 on:
   # to manually trigger if I somehow missed an activity type
@@ -19,7 +19,7 @@ env:
   NODE_VERSION: 18.13.0
 
 jobs:
-  pr-into-merge:
+  merge:
     if: github.base_ref == 'merge'
     uses: ./.github/workflows/pscale-vercel-deploy.yml
     with:
@@ -27,10 +27,10 @@ jobs:
     secrets:
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      vercel-token: ${{ secrets.VERCEL_TOKEN }}
       pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+      vercel-token: ${{ secrets.VERCEL_TOKEN }}
 
-  pr-into-dev:
+  dev:
     if: github.base_ref == 'dev'
     uses: ./.github/workflows/pscale-vercel-deploy.yml
     with:
@@ -38,10 +38,10 @@ jobs:
     secrets:
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      vercel-token: ${{ secrets.VERCEL_TOKEN }}
       pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+      vercel-token: ${{ secrets.VERCEL_TOKEN }}
 
-  pr-into-main:
+  main:
     if: github.base_ref == 'main'
     uses: ./.github/workflows/pscale-vercel-deploy.yml
     with:
@@ -49,8 +49,8 @@ jobs:
     secrets:
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      vercel-token: ${{ secrets.VERCEL_TOKEN }}
       pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+      vercel-token: ${{ secrets.VERCEL_TOKEN }}
 
   # setup:
   #   runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-name: Planetscale Branch + DR Creation and Vercel Deployment
+name: Planetscale Branch + Pword + DR Creation and Vercel Deployment
 
 on:
   workflow_call:
@@ -508,7 +508,7 @@ jobs:
   # uses: ./.github/workflows/pscale-dr-check-deployment-state.yml
   # with:
   #   gh-environment: ${{ inputs.gh-environment }}
-  prechecks-merge:
+  prechecks-pr-merge:
     if: ${{ !failure() && needs.setup.outputs.DB_CHANGES == 'true' }}
     needs: [setup, pscale-create-branch-pword-dr]
     runs-on: ubuntu-latest

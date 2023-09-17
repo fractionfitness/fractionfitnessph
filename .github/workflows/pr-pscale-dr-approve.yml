@@ -1,4 +1,4 @@
-name: Approve Planetscale Deploy Request for Github Branch PRs into Dev/Main
+name: Approve Pscale DR for Github Branch PR (main/dev)
 
 on:
   workflow_dispatch:
@@ -7,6 +7,30 @@ env:
   NODE_VERSION: 18.13.0
 
 jobs:
+  dev:
+    if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'dev'
+    needs: setup
+    uses: ./.github/workflows/pscale-dr-approve.yml
+    with:
+      gh-environment: Preview
+      gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
+      gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
+    secrets:
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+
+  main:
+    if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'main'
+    needs: setup
+    uses: ./.github/workflows/pscale-dr-approve.yml
+    with:
+      gh-environment: Production
+      gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
+      gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
+    secrets:
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+
   setup:
     runs-on: ubuntu-latest
     outputs:
@@ -51,30 +75,3 @@ jobs:
           echo "GITHUB_PR_TARGET_BRANCH=$GITHUB_PR_TARGET_BRANCH" >> "$GITHUB_OUTPUT"
 
         # GITHUB_PR_TARGET_BRANCH="merge"
-
-  # pr-into-merge:
-  # if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'merge'
-
-  pr-into-dev:
-    if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'dev'
-    needs: setup
-    uses: ./.github/workflows/pscale-dr-approve.yml
-    with:
-      gh-environment: Preview
-      gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
-      gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
-    secrets:
-      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
-
-  pr-into-main:
-    if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'main'
-    needs: setup
-    uses: ./.github/workflows/pscale-dr-approve.yml
-    with:
-      gh-environment: Production
-      gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
-      gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
-    secrets:
-      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
