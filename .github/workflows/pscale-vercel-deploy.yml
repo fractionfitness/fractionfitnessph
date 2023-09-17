@@ -46,6 +46,8 @@ jobs:
       EXISTING_DR_STATE: ${{ steps.existing_dr.outputs.DR_STATE }}
       EXISTING_DR_APPROVED: ${{ steps.existing_dr.outputs.DR_APPROVED }}
       EXISTING_DR_NUMBER: ${{ steps.existing_dr.outputs.DR_NUMBER }}
+      EXISTING_DEPLOYMENT_STATE: ${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
+      EXISTING_DEPLOYABLE: ${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
       RUN_PSCALE_CREATE: ${{ steps.check_pscale_create_exec.outputs.RUN_PSCALE_CREATE }}
     steps:
       # - name: check github context
@@ -258,7 +260,7 @@ jobs:
           echo "needs.setup.outputs.PSCALE_BRANCH_EXISTS ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS }}"
           echo "needs.setup.outputs.EXISTING_PWORD_ID ${{ needs.setup.outputs.EXISTING_PWORD_ID }}"
           echo "needs.setup.outputs.EXISTING_PWORD_CACHE_HIT ${{ needs.setup.outputs.EXISTING_PWORD_CACHE_HIT }}"
-      - name: Download scripts artifact
+      - name: Download shell scripts artifact
         uses: actions/download-artifact@v3
         with:
           name: scripts
@@ -503,7 +505,50 @@ jobs:
         # alternative to double bracket conditional
         # elif [ -n "${EXISTING_DR_NUMBER}" -a "${EXISTING_DR_STATE}" == "open" ]; then
 
-    # prechecks before vercel deployment and pscale db reset
+  # uses: ./.github/workflows/pscale-dr-check-deployment-state.yml
+  # with:
+  #   gh-environment: ${{ inputs.gh-environment }}
+  prechecks-merge:
+    if: ${{ !failure() && needs.setup.outputs.DB_CHANGES == 'true' }}
+    needs: [setup, pscale-create-branch-pword-dr]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.gh-environment }}
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.pscale-token-id }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
+      PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+    steps:
+      - name: Download shell scripts artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: scripts
+          path: ./
+      - name: Make shell scripts executable
+        run: chmod -R +x ./my-scripts/
+      - name: Planetscale Setup
+        id: pscale_setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Get Pscale DR info for Branch, if exists
+        id: dr_exists
+        working-directory: ./my-scripts/pscale/
+        run: |
+          ./check-dr-exists.sh ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} ${{ env.PSCALE_ORG_NAME }}
+
+          echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+      - name: Check if Pscale DR is ready for deployment
+        working-directory: ./my-scripts/pscale/
+        run: |
+          EXISTS=${{ steps.dr_exists.outputs.DR_EXISTS }}
+          STATE=${{ steps.dr_exists.outputs.DR_STATE }}
+          APPROVED=${{ steps.dr_exists.outputs.DR_APPROVED }}
+          DEPLOYMENT_STATE=${{ steps.dr_exists.outputs.DR_DEPLOY_STATE }}
+          DEPLOYABLE=${{ steps.dr_exists.outputs.DR_DEPLOYABLE }}
+
+          source ./check-dr-deployment-state.sh
+
+  # prechecks before vercel deployment and pscale db reset
   prechecks-deploy:
     needs: [setup, pscale-create-branch-pword-dr]
     # pscale-create-branch-pword-dr job will be skipped on PR synchronize

@@ -19,7 +19,7 @@ env:
 jobs:
   pr-into-merge:
     if: github.base_ref == 'merge'
-    uses: ./.github/workflows/pscale-dr-check.yml
+    uses: ./.github/workflows/pscale-dr-check-deployment-state.yml
     with:
       gh-environment: Preview
     secrets:
@@ -28,7 +28,7 @@ jobs:
 
   pr-into-dev:
     if: github.base_ref == 'dev'
-    uses: ./.github/workflows/pscale-dr-check.yml
+    uses: ./.github/workflows/pscale-dr-check-deployment-state.yml
     with:
       gh-environment: Preview
     secrets:
@@ -37,7 +37,7 @@ jobs:
 
   pr-into-main:
     if: github.base_ref == 'main'
-    uses: ./.github/workflows/pscale-dr-check.yml
+    uses: ./.github/workflows/pscale-dr-check-deployment-state.yml
     with:
       gh-environment: Production
     secrets:
