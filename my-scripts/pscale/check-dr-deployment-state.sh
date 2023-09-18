@@ -17,7 +17,7 @@ else
   fi
 
   if [ "$DEPLOYMENT_STATE" != "ready" ]; then
-    echo "Deploy Request state is not equal to \"ready\" or state is equal to \"no_changes\" (meaning no DB schema changes)."
+    echo "Deploy Request state is not equal to \"ready\" or state is equal to \"no_changes\" (i.e., no DB schema changes)."
   fi
 
   if [ "$DEPLOYABLE" != "Yes" ]; then
