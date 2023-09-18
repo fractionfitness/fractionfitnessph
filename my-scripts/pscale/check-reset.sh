@@ -20,4 +20,4 @@ else
 fi
 
 echo "RESET: ${RESET}"
-echo "RESET=${RESET}" >> $GITHUB_OUTPUT
+echo "RESET=${RESET}" >> "$GITHUB_OUTPUT"
