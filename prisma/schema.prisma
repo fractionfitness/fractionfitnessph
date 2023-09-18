@@ -230,3 +230,8 @@ model Tester11 {
   id   Int    @id @default(autoincrement())
   name String
 }
+
+model Tester12 {
+  id   Int    @id @default(autoincrement())
+  name String
+}
