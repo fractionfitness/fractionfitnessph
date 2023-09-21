@@ -36,3 +36,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ignore reference files (includes secrets)
+references/
+
+# ignore act event files
+act/
