@@ -36,16 +36,16 @@ jobs:
       EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
     steps:
-      - name: Check github context values
-        run: |
-          echo "github.base_ref ${{ github.base_ref }}"
-          echo "github.event.pull_request.head.ref ${{ github.event.pull_request.head.ref }}"
-          echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
-          echo "github.head_ref ${{ github.head_ref }}"
-          echo "github.base_ref ${{ github.base_ref }}"
-          echo "github.event.pull_request.merge_commit_sha ${{ github.event.pull_request.merge_commit_sha }} "
-          echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
-          echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+      # - name: Check github context values
+      #   run: |
+      #     echo "github.base_ref ${{ github.base_ref }}"
+      #     echo "github.event.pull_request.head.ref ${{ github.event.pull_request.head.ref }}"
+      #     echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
+      #     echo "github.head_ref ${{ github.head_ref }}"
+      #     echo "github.base_ref ${{ github.base_ref }}"
+      #     echo "github.event.pull_request.merge_commit_sha ${{ github.event.pull_request.merge_commit_sha }} "
+      #     echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
+      #     echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -101,7 +101,7 @@ jobs:
           echo "EXISTING_PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
           echo "EXISTING_PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
 
-  pscale-deploy-cleanup:
+  pscale-deploy-dr-cleanup:
     if: needs.setup.outputs.DB_CHANGES == 'true'
     needs: setup
     runs-on: ubuntu-latest
