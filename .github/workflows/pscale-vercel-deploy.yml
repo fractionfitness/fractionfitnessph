@@ -35,7 +35,8 @@ jobs:
       # ERROR_DB_CHANGES: ${{ steps.db_changes.outputs.ERROR }}
       DB_CHANGES_ON_PR_SYNC: ${{ steps.db_changes_on_sync.outputs.DB_CHANGES }}
       ERROR_DB_CHANGES_ON_PR_SYNC: ${{ steps.db_changes_on_sync.outputs.ERROR }}
-      GITHUB_BRANCH_NAME: ${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
+      GITHUB_BRANCH_NAME: ${{ steps.gh_branch_check.outputs.GITHUB_BRANCH_NAME }}
+      STAGING: ${{ steps.gh_branch_check.outputs.STAGING }}
       SHORTENED_GH_BRANCH_NAME: ${{ steps.branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}
       PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
       PSCALE_BRANCH_EXISTS: ${{ steps.branch_exists_on_pr.outputs.PSCALE_BRANCH_EXISTS }}
@@ -65,8 +66,19 @@ jobs:
             ./.pscale/cli-helper-scripts/
             ./my-scripts/
       - name: Get Github Branch Name
-        id: gh_branch
-        run: echo "GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "${GITHUB_OUTPUT}"
+        id: gh_branch_check
+        run: |
+          GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+
+          check_staging=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -w \"staging\" || true ")
+          if [ "$check_staging" == "true" ]; then
+            STAGING=true
+          else
+            STAGING=false
+          fi
+
+          echo "GITHUB_BRANCH_NAME=$GITHUB_BRANCH_NAME" >> "${GITHUB_OUTPUT}"
+          echo "STAGING=$STAGING" >> "${GITHUB_OUTPUT}"
       - name: Check DB changes on PR (Head vs. Base)
         id: db_changes
         working-directory: ./my-scripts/pscale/
@@ -107,7 +119,7 @@ jobs:
         working-directory: ./my-scripts/pscale/
         shell: bash
         run: |
-          GITHUB_BRANCH_NAME=${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
+          GITHUB_BRANCH_NAME=${{ steps.gh_branch_check.outputs.GITHUB_BRANCH_NAME }}
           GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
 
           ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
@@ -173,6 +185,7 @@ jobs:
 
       - name: Check if Pscale Create (Branch + Pword + DR) Job needs to be executed
         id: check_pscale_create_exec
+        working-directory: ./my-scripts/pscale/
         run: |
           DB_CHANGES=${{ steps.db_changes.outputs.DB_CHANGES }}
           PSCALE_BRANCH_EXISTS=${{ steps.branch_exists_on_pr.outputs.PSCALE_BRANCH_EXISTS }}
@@ -180,30 +193,12 @@ jobs:
           EXISTING_PWORD_CACHE_HIT=${{ steps.pword_cache_hit.outputs.EXISTING_PWORD_CACHE_HIT }}
           DR_EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
           DR_APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
-          GITHUB_BRANCH_NAME=${{ steps.gh_branch.outputs.GITHUB_BRANCH_NAME }}
+          GITHUB_BRANCH_NAME=${{ steps.gh_branch_check.outputs.GITHUB_BRANCH_NAME }}
+          STAGING=${{ steps.gh_branch_check.outputs.STAGING }}
 
-          output=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -w \"staging\" || true ")
+          source ./check-pscale-create.sh
 
-          if [ "$DB_CHANGES" == "true" ]; then
-            if [[ "$PSCALE_BRANCH_EXISTS" == "false" || "$EXISTING_PWORD_ID" == "" || "$EXISTING_PWORD_CACHE_HIT" != "true" || "$DR_EXISTS" != "true" ]]; then
-              RUN_PSCALE_CREATE=true
-            elif [ "$DR_EXISTS" == "true" ]; then
-              if [[ "$DR_STATE" == "closed" || "$DR_APPROVED" == "Yes" ]]; then
-                RUN_PSCALE_CREATE=true
-              else
-                RUN_PSCALE_CREATE=false
-              fi
-            else
-              RUN_PSCALE_CREATE=false
-            fi
-          elif [ "$output" == "staging" ]; then
-            RUN_PSCALE_CREATE=true
-          else
-            RUN_PSCALE_CREATE=false
-          fi
-
-          echo "RUN_PSCALE_CREATE: $RUN_PSCALE_CREATE"
-          echo "RUN_PSCALE_CREATE=${RUN_PSCALE_CREATE}" >> "$GITHUB_OUTPUT"
+          echo "Step Outputs: RUN_PSCALE_CREATE"
 
   pscale-create-branch-pword-dr:
     if: needs.setup.outputs.RUN_PSCALE_CREATE == 'true'
@@ -221,6 +216,7 @@ jobs:
       DB_CHANGES_ON_PR_SYNC: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
       ERROR_DB_CHANGES_ON_PR_SYNC: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
       SHORTENED_GH_BRANCH_NAME: ${{ needs.setup.outputs.SHORTENED_GH_BRANCH_NAME }}
+      STAGING: ${{ needs.setup.outputs.STAGING }}
       PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
       EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
@@ -375,9 +371,11 @@ jobs:
         id: close_dr
         run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ env.EXISTING_DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
 
-      # only runs when no existing DR OR if it exists, its state='closed' OR previous step closed existing DR
+      # only runs when env.DB_CHANGES == 'true' && (no existing DR OR if it exists, its state='closed' OR previous step closed existing DR)
+      # env.DB_CHANGES == 'true' ensures that no DR is created for staging branch when there are no DB changes but a branch will still be created whether or not there were DB changes
       - name: Create Deploy Request
-        if: env.EXISTING_DR_EXISTS != 'true' || env.EXISTING_DR_STATE != 'open' || steps.close_dr.outcome == 'success'
+        # if: env.EXISTING_DR_EXISTS != 'true' || env.EXISTING_DR_STATE != 'open' || steps.close_dr.outcome == 'success'
+        if: ${{ env.DB_CHANGES == 'true' && (env.EXISTING_DR_EXISTS != 'true' || env.EXISTING_DR_STATE != 'open' || steps.close_dr.outcome == 'success') }}
         id: create_dr
         uses: planetscale/create-deploy-request-action@v2
         with:
@@ -385,6 +383,10 @@ jobs:
           database_name: ${{ env.PSCALE_DB_NAME }}
           branch_name: ${{ env.PSCALE_BRANCH_NAME }}
           deploy_to: ${{ env.PSCALE_SRC_BRANCH }}
+
+      - name: Enable Gated Deployments (Disable Auto Apply) for PRs into main
+        if: env.STAGING == 'true'
+        run: pscale deploy-request edit ${{ env.PSCALE_DB_NAME }} ${{ env.EXISTING_DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --auto-apply "disable"
 
       - name: Get Current Deploy Request Number
         id: deploy_request
@@ -462,6 +464,7 @@ jobs:
       DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}
       DB_CHANGES_ON_PR_SYNC: ${{ needs.setup.outputs.DB_CHANGES_ON_PR_SYNC }}
       ERROR_DB_CHANGES_ON_PR_SYNC: ${{ needs.setup.outputs.ERROR_DB_CHANGES_ON_PR_SYNC }}
+      STAGING: ${{ needs.setup.outputs.STAGING }}
     outputs:
       RESET_DB: ${{ steps.db_reset_check.outputs.RESET }}
       PWORD_NAME: ${{ steps.branch_pword.outputs.PWORD_NAME }}
@@ -473,13 +476,14 @@ jobs:
         run: chmod -R +x ./my-scripts/pscale/
 
       - name: Get Github environment's PSCALE_SRC_BRANCH_DATABASE_URL
-        if: env.DB_CHANGES != 'true'
+        # if: env.DB_CHANGES != 'true'
+        if: env.DB_CHANGES != 'true' && env.STAGING != 'true'
         run: echo ${{ secrets.pscale-src-db-url }} >> "./branch-conn-string.txt"
 
         # INSERT CODE HERE FOR UPLOADING branch-conn-string.txt IF YOU WANT TO USE CACHE TO STORE PSCALE BRANCH CREDENTIALS INSTEAD OF ARTIFACTS
 
       - name: Get Pscale Branch Pword Name and ID (existing from previous workflow runs or newly created from previous job)
-        if: env.DB_CHANGES == 'true'
+        if: env.DB_CHANGES == 'true' || env.STAGING == 'true'
         id: branch_pword
         run: |
           if [ -n "${{ needs.pscale-create-branch-pword-dr.outputs.CREATED_PWORD_NAME }}" ]; then
@@ -496,7 +500,7 @@ jobs:
         # if pword was created in previous job (pscale-create-branch-pword-dr), use that, otherwise, use the existing pword retrieved by setup job
 
       - name: Restore Cache Branch Password
-        if: env.DB_CHANGES == 'true'
+        if: env.DB_CHANGES == 'true' || env.STAGING == 'true'
         id: check_cache_pword
         uses: actions/cache/restore@v3
         with:
@@ -512,7 +516,7 @@ jobs:
           path: ./branch-conn-string.txt
 
       - name: Check if Pscale DB needs to be reset
-        if: env.DB_CHANGES == 'true'
+        if: env.DB_CHANGES == 'true' || env.STAGING == 'true'
         id: db_reset_check
         working-directory: ./my-scripts/pscale/
         run: |
