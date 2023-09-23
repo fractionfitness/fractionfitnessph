@@ -7,11 +7,13 @@
 # Check if branch already exists
 # output=null if no branch found
 output=`pscale branch list $1 --org $2 --format json | jq -r "[.[] | select(.name == \"$3\") ] | .[0].name" `
-if [ "$output" != "null" ]; then
-  EXISTS=true
-else
+if [[ "${output}" == "null" || "${output}" == "" ]]; then
   EXISTS=false
+else
+  EXISTS=true
 fi
+
+echo "output: $output"
 echo "PSCALE_BRANCH_EXISTS: ${EXISTS}"
 echo "PSCALE_BRANCH_EXISTS=${EXISTS}" >> "${GITHUB_OUTPUT}"
 

@@ -467,8 +467,8 @@ jobs:
       STAGING: ${{ needs.setup.outputs.STAGING }}
     outputs:
       RESET_DB: ${{ steps.db_reset_check.outputs.RESET }}
-      PWORD_NAME: ${{ steps.branch_pword.outputs.PWORD_NAME }}
-      PWORD_ID: ${{ steps.branch_pword.outputs.PWORD_ID }}
+      # PWORD_NAME: ${{ steps.branch_pword.outputs.PWORD_NAME }}
+      # PWORD_ID: ${{ steps.branch_pword.outputs.PWORD_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
