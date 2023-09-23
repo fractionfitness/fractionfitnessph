@@ -540,9 +540,10 @@ jobs:
         with:
           path: ./node_modules
           key: deps-node-modules-${{ hashFiles('package-lock.json') }}
-      # need to check if cache-hit!=true, since if step doesn't execute, no value will be set
+      # need to check if RESET=true, to prevent running step if prev step is skipped
+      # need to check cache-hit!=true, since if prev step doesn't execute, no value will be set)
       - name: Install dependencies to enable Prisma DB Push
-        if: steps.cache_deps.outputs.cache-hit != 'true'
+        if: steps.db_reset_check.outputs.RESET == 'true' && steps.cache_deps.outputs.cache-hit != 'true'
         id: install_deps
         run: npm ci
       - name: Prisma DB Push
