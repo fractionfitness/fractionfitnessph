@@ -33,6 +33,7 @@ jobs:
     outputs:
       DB_CHANGES: ${{ steps.db_changes.outputs.DB_CHANGES }}
       PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+      PSCALE_BRANCH_EXISTS: ${{ steps.branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
       EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
       EXISTING_PWORD_ID: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
     steps:
@@ -73,7 +74,7 @@ jobs:
 
         # COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
       - name: Planetscale Setup
-        if: steps.db_changes.outputs.DB_CHANGES == 'true'
+        if: steps.db_changes.outputs.DB_CHANGES == 'true' || github.base_ref == 'main'
         id: pscale_setup
         uses: planetscale/setup-pscale-action@v1
       - name: Get Pscale Branch Name
@@ -88,8 +89,17 @@ jobs:
           ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
 
           echo "outputs: PSCALE_BRANCH_NAME / SHORTENED_GH_BRANCH_NAME"
-      - name: Get Branch Password if exists
+      - name: Check if Pscale Branch already exists
         if: steps.branch_name.outcome == 'success'
+        id: branch_exists
+        working-directory: ./my-scripts/pscale/
+        run: |
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+          ./check-branch-exists.sh $PSCALE_DB_NAME $PSCALE_ORG_NAME $PSCALE_BRANCH_NAME
+
+          echo "outputs: PSCALE_BRANCH_EXISTS"
+      - name: Get Branch Password if exists
+        if: steps.branch_exists.outputs.PSCALE_BRANCH_EXISTS == 'true'
         id: existing_pword
         shell: bash
         working-directory: ./my-scripts/pscale/
@@ -107,7 +117,9 @@ jobs:
           echo "EXISTING_PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
 
   pscale-deploy-dr-cleanup:
-    if: needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main'
+    # if: needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main'
+    # if: ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true' && (needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main') }}
+    if: needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true'
     needs: setup
     runs-on: ubuntu-latest
     environment: ${{ inputs.gh-environment }}
@@ -117,8 +129,6 @@ jobs:
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
       PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
-      EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
-      EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -162,6 +172,7 @@ jobs:
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
       # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
+      # no need to check if DR is approved, ready to deploy, and deployable since deploy-deploy-request-action will just error out if DR cannot be deployed
       - name: Deploy deploy request
         if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_EXISTS == 'true'
         id: deploy_dr
@@ -208,6 +219,37 @@ jobs:
         if: steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main'
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
+      # - name: Cache Cleanup (delete caches created by the Opened PR Workflow)
+      #   run: |
+      #     curl -L \
+      #     -X DELETE \
+      #     -H "Accept: application/vnd.github+json" \
+      #     -H "Authorization: Bearer ${{ github.token }}" \
+      #     -H "X-GitHub-Api-Version: 2022-11-28" \
+      #     "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}"
+
+      #     curl -L \
+      #     -X DELETE \
+      #     -H "Accept: application/vnd.github+json" \
+      #     -H "Authorization: Bearer ${{ github.token }}" \
+      #     -H "X-GitHub-Api-Version: 2022-11-28" \
+      #     "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=node-cache-Linux-npm-${{ hashFiles('package-lock.json') }}"
+
+      #     curl -L \
+      #     -X DELETE \
+      #     -H "Accept: application/vnd.github+json" \
+      #     -H "Authorization: Bearer ${{ github.token }}" \
+      #     -H "X-GitHub-Api-Version: 2022-11-28" \
+      #     "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=deps-node-modules-${{ hashFiles('package-lock.json') }}"
+
+  gh-cache-cleanup:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.gh-environment }}
+    env:
+      EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
+      EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
+    steps:
       - name: Cache Cleanup (delete caches created by the Opened PR Workflow)
         run: |
           curl -L \
