@@ -172,8 +172,8 @@ jobs:
 
       # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
       # no need to check if DR is approved, ready to deploy, and deployable since deploy-deploy-request-action will just error out if DR cannot be deployed
-      - name: Deploy deploy request
-        if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_EXISTS == 'true'
+      - name: Deploy Deploy Request
+        if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_EXISTS == 'true' && steps.existing_dr.outputs.DR_STATE == 'open'
         id: deploy_dr
         uses: planetscale/deploy-deploy-request-action@v3
         with:
@@ -191,7 +191,7 @@ jobs:
       # only delete pscale branch if STATE=closed and DEPLOY_STATE=complete ??? or just delete w/o checking
       # need to check since for gh main branch, we do manual deploy-request apply, skip-revert, and "branch delete" and so that this workflow is more flexible and reusable
       - name: Close Pscale Deploy Request
-        if: github.event.pull_request.merged == false && steps.existing_dr.outputs.DR_EXISTS == 'true'
+        if: github.event.pull_request.merged == false && steps.existing_dr.outputs.DR_EXISTS == 'true' && steps.existing_dr.outputs.DR_STATE == 'open'
         run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
 
       # should always run
@@ -204,6 +204,11 @@ jobs:
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
+      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
+      - name: Delete Pscale Branch
+        if: steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main'
+        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
+
         # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
         # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting
         # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
@@ -212,11 +217,6 @@ jobs:
         run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npx prisma db seed
 
         # run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npm run db:reset
-
-      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
-      - name: Delete Pscale Branch
-        if: steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main'
-        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
   gh-cache-cleanup:
     needs: setup
