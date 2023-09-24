@@ -47,8 +47,8 @@ jobs:
       EXISTING_DR_STATE: ${{ steps.existing_dr.outputs.DR_STATE }}
       EXISTING_DR_APPROVED: ${{ steps.existing_dr.outputs.DR_APPROVED }}
       EXISTING_DR_NUMBER: ${{ steps.existing_dr.outputs.DR_NUMBER }}
-      EXISTING_DEPLOYMENT_STATE: ${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
-      EXISTING_DEPLOYABLE: ${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
+      # EXISTING_DEPLOY_STATE: ${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
+      # EXISTING_DEPLOYABLE: ${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
       RUN_PSCALE_CREATE: ${{ steps.check_pscale_create_exec.outputs.RUN_PSCALE_CREATE }}
     steps:
       - name: Checkout repository
@@ -354,7 +354,7 @@ jobs:
 
       - name: Check existing Open & Approved DR if it needs to be closed
         if: env.EXISTING_DR_EXISTS == 'true' && env.EXISTING_DR_STATE == 'open' && env.EXISTING_DR_APPROVED == 'Yes'
-        id: approved_dr_check
+        id: approved_dr_reset_check
         working-directory: ./my-scripts/pscale/
         run: |
           PR_ACTIVITY_TYPE=${{ github.event.action }}
@@ -367,7 +367,7 @@ jobs:
           echo "Step Outputs: RESET"
 
       - name: Close Open & Approved DR if necessary, to enforce review on PR sync
-        if: steps.approved_dr_check.outputs.RESET == 'true'
+        if: steps.approved_dr_reset_check.outputs.RESET == 'true'
         id: close_dr
         run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ env.EXISTING_DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
 
@@ -414,7 +414,7 @@ jobs:
 
   prechecks-pr-merge:
     if: ${{ !failure() && needs.setup.outputs.DB_CHANGES == 'true' }}
-    needs: [setup, pscale-create-branch-pword-dr]
+    needs: [setup, prechecks-deploy]
     runs-on: ubuntu-latest
     environment: ${{ inputs.gh-environment }}
     env:
@@ -441,16 +441,32 @@ jobs:
           ./check-dr-exists.sh ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} ${{ env.PSCALE_ORG_NAME }}
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
-      - name: Check if Pscale DR is ready for deployment
+      - name: Check Pscale DR if needs to be Approved and/or Deployed
+        id: dr_approval_deploy_check
         working-directory: ./my-scripts/pscale/
         run: |
           EXISTS=${{ steps.dr_exists.outputs.DR_EXISTS }}
           STATE=${{ steps.dr_exists.outputs.DR_STATE }}
           APPROVED=${{ steps.dr_exists.outputs.DR_APPROVED }}
-          DEPLOYMENT_STATE=${{ steps.dr_exists.outputs.DR_DEPLOY_STATE }}
+          DEPLOY_STATE=${{ steps.dr_exists.outputs.DR_DEPLOY_STATE }}
           DEPLOYABLE=${{ steps.dr_exists.outputs.DR_DEPLOYABLE }}
 
-          source ./check-dr-deployment-state.sh
+          source ./check-dr-approval-deployment-state.sh
+
+          echo "Step Outputs: DEPLOY_DR / APPROVE_DR"
+      - name: Check PR if ready to be merged.
+        working-directory: ./my-scripts/pscale/
+        run: |
+          DEPLOY_DR=${{ steps.dr_approval_deploy_check.outputs.DEPLOY_DR }}
+          APPROVED=${{ steps.dr_exists.outputs.DR_APPROVED }}
+
+          if [[ "$DEPLOY_DR" == "true" && "$APPROVED" == "Yes" ]]; then
+            echo "Pull Request is ready to be merged."
+            exit 0
+          else
+            echo "Pull Request cannot be merged yet."
+            exit 1
+          fi
 
   # prechecks before vercel deployment and pscale db reset
   prechecks-deploy:

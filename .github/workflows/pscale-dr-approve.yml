@@ -72,61 +72,23 @@ jobs:
 
           echo "Step Outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
-      # no need to really do this step since "pscale deploy-request review" will error out if nonexistent DR or any other errors | cannot move this to previous step since that step does not set DR_EXISTS as an environment variable
-      - name: Stop workflow and error out if Pscale DR does not exist
-        run: |
-          DR_EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
-          DR_NUMBER=${{ steps.existing_dr.outputs.DR_NUMBER }}
-          GITHUB_BRANCH_NAME=${{ env.GITHUB_BRANCH_NAME }}
-
-          if [ "$DR_EXISTS" == "true" ]; then
-            echo "Pscale DR (number: ${DR_NUMBER}) exists for the Github Branch ($GITHUB_BRANCH_NAME)"
-            exit 0
-          else
-            echo "Pscale DR does not exist for the Github Branch ($GITHUB_BRANCH_NAME)"
-            exit 1
-          fi
-
-      # only approve DR if DR_STATE=open, DR_DEPLOY_STATE=ready, and DR_DEPLOYABLE=Yes is ready and
+      # dr_approvable will error out if cannot be deployed (even though already approved)
       - name: Check if Open DR has schema changes and is deployable, before approval
         id: dr_approvable
+        working-directory: ./my-scripts/pscale/
         run: |
-          DR_STATE=${{ steps.existing_dr.outputs.DR_STATE }}
-          DR_APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
-          DR_DEPLOY_STATE=${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
-          DR_DEPLOYABLE=${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
+          EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
+          STATE=${{ steps.existing_dr.outputs.DR_STATE }}
+          APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
+          DEPLOY_STATE=${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
+          DEPLOYABLE=${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
 
-          if [[ "$DR_STATE" == "open" && "$DR_APPROVED" == "Yes" ]]; then
-            echo "Planetscale Deploy Request is already approved."
-            APPROVE_DR="false"
-            echo "APPROVE_DR=${APPROVE_DR}" >> "${GITHUB_OUTPUT}"
-            exit 0
-          elif [[ "$DR_STATE" == "open" && "$DR_APPROVED" == "No" && "$DR_DEPLOY_STATE" == "ready" && "$DR_DEPLOYABLE" == "Yes" ]]; then
-            echo "Planetscale Deploy Request can be approved."
-            APPROVE_DR="true"
-            echo "APPROVE_DR=${APPROVE_DR}" >> "${GITHUB_OUTPUT}"
-            exit 0
-          else
-            if [ "$DR_STATE" == "closed" ]; then
-              echo "There is no Open Planetscale Deploy Request. Please create one."
-            elif [ "$DR_DEPLOY_STATE" == "no_changes" ]; then
-              echo "Open Planetscale Deploy Request does not have any changes. Please push schema changes to the Planetscale Branch."
-            elif [ "$DR_DEPLOYABLE" == "No" ]; then
-              echo "Open Planetscale Deploy Request is not deployable."
-            else
-              echo "Unknown error occured when checking Planetscale Deploy Request for approval."
-            fi
+          source ./check-dr-approval-deployment-state.sh
 
-            APPROVE_DR="false"
-            exit 1
-          fi
-
-          echo "APPROVE_DR: ${APPROVE_DR}"
+          echo "Step Outputs: DEPLOY_DR / APPROVE_DR"
 
       # no need since we have a previous step that will error out if DR is nonexistent
       # if: steps.existing_dr.outputs.DR_EXISTS == 'true'
-      # dr_approvable will error out if cannot be approved but will not error out if already approved
       - name: Approve Pscale Deploy Request
         if: steps.dr_approvable.outputs.APPROVE_DR == 'true'
-        run: |
-          pscale deploy-request review ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --approve
+        run: pscale deploy-request review ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --approve
