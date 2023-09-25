@@ -219,12 +219,6 @@ jobs:
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
-      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main and no DR exists (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
-      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main') }}
-      - name: Delete Pscale Branch
-        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
-        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
-
       # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
       # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting but this step will be skipped when workflow is rerun because deploy_dr step will also be skipped
       # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
@@ -235,6 +229,13 @@ jobs:
         run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npx prisma db seed
 
         # run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npm run db:reset
+
+      # should not delete until db seed was successful, otherwise, cannot rerun workflow if db seed fails
+      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main and no DR exists (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
+      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main') }}
+      - name: Delete Pscale Branch
+        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
+        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
   gh-cache-cleanup:
     needs: setup
