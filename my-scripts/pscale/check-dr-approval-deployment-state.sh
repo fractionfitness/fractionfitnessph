@@ -7,7 +7,7 @@ if [[ "$EXISTS" == "true" && "$STATE" == "open" && "$APPROVED" == "Yes" && "$DEP
   APPROVE_DR="false"
 
 elif [[ "$EXISTS" == "true" && "$STATE" == "open" && "$APPROVED" == "No" && "$DEPLOY_STATE" == "ready" && "$DEPLOYABLE" == "Yes" ]]; then
-  echo "Planetscale Deploy Request is ready for Approval and Deployment."
+  echo "Planetscale Deploy Request is ready for Approval."
   DEPLOY_DR="true"
   APPROVE_DR="true"
 
