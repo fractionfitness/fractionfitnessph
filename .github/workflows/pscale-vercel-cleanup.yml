@@ -129,6 +129,7 @@ jobs:
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
       PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
+      PSCALE_BRANCH_EXISTS: ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -170,10 +171,25 @@ jobs:
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
+      - name: Check if Open DR has schema changes and is deployable
+        if: github.event.pull_request.merged == true
+        id: dr_deployable
+        working-directory: ./my-scripts/pscale/
+        run: |
+          EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
+          STATE=${{ steps.existing_dr.outputs.DR_STATE }}
+          APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
+          DEPLOY_STATE=${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
+          DEPLOYABLE=${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
+
+          source ./check-dr-approval-deployment-state.sh
+
+          echo "Step Outputs: DEPLOY_DR / APPROVE_DR"
+
       # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
-      # no need to check if DR is approved, ready to deploy, and deployable since deploy-deploy-request-action will just error out if DR cannot be deployed
+      # only run if deployable and approved
       - name: Deploy Deploy Request
-        if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_EXISTS == 'true' && steps.existing_dr.outputs.DR_STATE == 'open'
+        if: github.event.pull_request.merged == true && steps.dr_deployable.outputs.DEPLOY_DR == 'true' && steps.existing_dr.outputs.DR_APPROVED == 'Yes'
         id: deploy_dr
         uses: planetscale/deploy-deploy-request-action@v3
         with:
@@ -184,12 +200,11 @@ jobs:
 
         # have to check if deploy_dr step executed successfully since can be skipped if no existing DR
       - name: Skip Revert Pscale Deploy Request
-        if: github.base_ref != 'main' && steps.deploy_dr.outcome == 'success'
+        if: github.base_ref == 'dev' && steps.deploy_dr.outcome == 'success'
         run: pscale deploy-request skip-revert ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
 
-      # need to check DR if State=closed??? we can already delete it right away
-      # only delete pscale branch if STATE=closed and DEPLOY_STATE=complete ??? or just delete w/o checking
-      # need to check since for gh main branch, we do manual deploy-request apply, skip-revert, and "branch delete" and so that this workflow is more flexible and reusable
+      # no need to check DR if State=closed, can be closed regardless of state
+      # only runs when pr is not merged
       - name: Close Pscale Deploy Request
         if: github.event.pull_request.merged == false && steps.existing_dr.outputs.DR_EXISTS == 'true' && steps.existing_dr.outputs.DR_STATE == 'open'
         run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
@@ -204,16 +219,19 @@ jobs:
 
           echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
 
-      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
+      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main and no DR exists (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
+      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main') }}
       - name: Delete Pscale Branch
-        if: steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main'
+        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
-        # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
-        # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting
-        # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
+      # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
+      # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting but this step will be skipped when workflow is rerun because deploy_dr step will also be skipped
+      # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
+      # if: github.base_ref != 'main' && steps.deploy_dr.outcome == 'success'
       - name: Prisma DB Seed
-        if: github.base_ref != 'main' && steps.deploy_dr.outcome == 'success'
+        # more flexible since we can rerun db seed even when deploy_dr is skipped (i.e., already deployed in a previous workflow run)
+        if: github.event.pull_request.merged == true && github.base_ref != 'main' && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete'
         run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npx prisma db seed
 
         # run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npm run db:reset
