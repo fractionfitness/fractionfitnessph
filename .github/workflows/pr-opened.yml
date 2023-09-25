@@ -44,7 +44,7 @@ jobs:
     if: github.base_ref == 'main'
     uses: ./.github/workflows/pscale-vercel-deploy.yml
     with:
-      gh-environment: Production
+      gh-environment: staging
     secrets:
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
