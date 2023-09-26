@@ -18,8 +18,9 @@ if [ "$BRANCH_TYPE" == "staging" ]; then
   echo "$GITHUB_BRANCH_NAME github branch (staging)"
   if [[ "${REF_NUM}" =~ ${SEMVER_REGEX} ]]; then
 
-  # only gets staging-semver
-    SHORTENED_GH_BRANCH_NAME=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{printf "%s-%s", $1, $2;}')
+    # only gets <staging-semver> from Github Branch Name
+    # Planetscale doesn't allow periods in Branch names, so replace periods with dashes
+    SHORTENED_GH_BRANCH_NAME=$(echo "${GITHUB_BRANCH_NAME}" | awk -F'[-]' '{printf "%s-%s", $1, $2;}' | tr "." "-")
 
   else
     echo "REF_NUM: $REF_NUM"
