@@ -1,0 +1,52 @@
+name: Opened PR (main/dev)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, dev, merge]
+    types: [
+        opened,
+        synchronize,
+        edited,
+        reopened,
+        unlocked,
+        # ready_for_review,
+        # review_requested,
+      ]
+
+env:
+  NODE_VERSION: 18.13.0
+
+jobs:
+  merge:
+    if: github.base_ref == 'merge'
+    uses: ./.github/workflows/pscale-vercel-deploy.yml
+    with:
+      gh-environment: Preview
+    secrets:
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+      vercel-token: ${{ secrets.VERCEL_TOKEN }}
+
+  dev:
+    if: github.base_ref == 'dev'
+    uses: ./.github/workflows/pscale-vercel-deploy.yml
+    with:
+      gh-environment: Preview
+    secrets:
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+      vercel-token: ${{ secrets.VERCEL_TOKEN }}
+
+  main:
+    if: github.base_ref == 'main'
+    uses: ./.github/workflows/pscale-vercel-deploy.yml
+    with:
+      gh-environment: staging
+    secrets:
+      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+      pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
+      vercel-token: ${{ secrets.VERCEL_TOKEN }}
