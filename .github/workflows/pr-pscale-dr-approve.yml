@@ -18,7 +18,7 @@ jobs:
         run: |
           GITHUB_BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
 
-          output=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -w \"staging\" || true ")
+          output=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -ow \"staging\" || true ")
           if [ "$output" == "staging" ]; then
             GITHUB_PR_TARGET_BRANCH="main"
           else
@@ -46,7 +46,7 @@ jobs:
     needs: setup
     uses: ./.github/workflows/pscale-dr-approve.yml
     with:
-      gh-environment: Production
+      gh-environment: staging
       gh-branch: ${{ needs.setup.outputs.GITHUB_BRANCH_NAME }}
       gh-pr-target: ${{ needs.setup.outputs.GITHUB_PR_TARGET_BRANCH }}
     secrets:
