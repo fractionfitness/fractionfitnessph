@@ -41,6 +41,8 @@ jobs:
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 
+  # THIS IS A TEST
+
   main:
     if: needs.setup.outputs.GITHUB_PR_TARGET_BRANCH == 'main'
     needs: setup
