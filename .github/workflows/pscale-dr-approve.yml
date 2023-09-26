@@ -1,0 +1,94 @@
+name: Planetscale DR Approve
+
+on:
+  workflow_call:
+    inputs:
+      gh-environment:
+        description: Github environment
+        required: true
+        type: string
+      gh-branch:
+        description: Github Branch w/c triggered calling workflow
+        required: true
+        type: string
+      gh-pr-target:
+        description: Github Pull Request Target Branch
+        required: true
+        type: string
+    secrets:
+      pscale-token:
+        required: true
+      pscale-token-id:
+        required: true
+
+env:
+  NODE_VERSION: 18.13.0
+
+jobs:
+  pscale-dr-approve:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.gh-environment }}
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.pscale-token-id }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      GITHUB_BRANCH_NAME: ${{ inputs.gh-branch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Make shell scripts executable
+        run: chmod -R +x ./my-scripts/pscale/
+      - name: Planetscale Setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Get Shortened Github Branch Name
+        id: shortened_gh_branch_name
+        working-directory: ./my-scripts/pscale/
+        run: |
+          GITHUB_BRANCH_NAME=${{ env.GITHUB_BRANCH_NAME }}
+          GITHUB_PR_NUMBER=""
+
+          ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
+
+          echo "Step Outputs: SHORTENED_GH_BRANCH_NAME / PSCALE_BRANCH_NAME"
+
+      # get SHORTENED_GH_BRANCH_NAME and use this to get Pscale Branch Name, since we don't know the Github branch's corresponding PR number
+      - name: Get Pscale Branch Name (w/o knowing the PR number)
+        id: branch_name
+        working-directory: ./my-scripts/pscale/
+        run: |
+          output=$(eval "pscale branch list ${{ env.PSCALE_DB_NAME }} --org ${{ env.PSCALE_ORG_NAME }} | grep -w \"${{ steps.shortened_gh_branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}\" | awk -F' ' '{print \$1}' " 2>&1)
+
+          echo "PSCALE_BRANCH_NAME=$output" >> "$GITHUB_OUTPUT"
+
+          echo "Step Outputs: PSCALE_BRANCH_NAME"
+      - name: Get Pscale DR info for Branch, if exists
+        id: existing_dr
+        working-directory: ./my-scripts/pscale/
+        run: |
+          ./check-dr-exists.sh ${{ env.PSCALE_DB_NAME }} ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }} ${{ env.PSCALE_ORG_NAME }}
+
+          echo "DR_EXISTS: $DR_EXISTS"
+
+          echo "Step Outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+
+      # dr_approvable will error out if cannot be deployed (even though already approved)
+      - name: Check if Open DR has schema changes and is deployable, before approval
+        id: dr_approvable
+        working-directory: ./my-scripts/pscale/
+        run: |
+          EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
+          STATE=${{ steps.existing_dr.outputs.DR_STATE }}
+          APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
+          DEPLOY_STATE=${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
+          DEPLOYABLE=${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
+
+          source ./check-dr-approval-deployment-state.sh
+
+          echo "Step Outputs: DEPLOY_DR / APPROVE_DR"
+
+      # no need since we have a previous step that will error out if DR is nonexistent
+      # if: steps.existing_dr.outputs.DR_EXISTS == 'true'
+      - name: Approve Pscale Deploy Request
+        if: steps.dr_approvable.outputs.APPROVE_DR == 'true'
+        run: pscale deploy-request review ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --approve
