@@ -41,3 +41,20 @@ jobs:
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       vercel-token: ${{ secrets.VERCEL_TOKEN }}
       # no pscale-src-branch-db-url for deployments to staging
+
+  test:
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check github context values
+        run: |
+          echo "github.base_ref ${{ github.base_ref }}"
+          echo "github.event.pull_request.head.ref ${{ github.event.pull_request.head.ref }}"
+          echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
+          echo "github.head_ref ${{ github.head_ref }}"
+          echo "github.base_ref ${{ github.base_ref }}"
+          echo "github.event.pull_request.merge_commit_sha ${{ github.event.pull_request.merge_commit_sha }} "
+          echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
+          echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+          echo "-----------------------------------"
+          cat $GITHUB_EVENT_PATH
