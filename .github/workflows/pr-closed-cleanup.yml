@@ -31,13 +31,31 @@ jobs:
       pscale-src-branch-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
       vercel-token: ${{ secrets.VERCEL_TOKEN }}
 
+  # main:
+  #   if: github.base_ref == 'main'
+  #   uses: ./.github/workflows/pscale-vercel-cleanup.yml
+  #   with:
+  #     gh-environment: staging
+  #   secrets:
+  #     pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+  #     pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+  #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
+  #     # no pscale-src-branch-db-url for deployments to staging
+
   main:
     if: github.base_ref == 'main'
-    uses: ./.github/workflows/pscale-vercel-cleanup.yml
-    with:
-      gh-environment: staging
-    secrets:
-      pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
-      vercel-token: ${{ secrets.VERCEL_TOKEN }}
-      # no pscale-src-branch-db-url for deployments to staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check github context values
+        run: |
+          echo "github.base_ref ${{ github.base_ref }}"
+          echo "github.event.pull_request.head.ref ${{ github.event.pull_request.head.ref }}"
+          echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
+          echo "github.head_ref ${{ github.head_ref }}"
+          echo "github.base_ref ${{ github.base_ref }}"
+          echo "github.event.pull_request.merge_commit_sha ${{ github.event.pull_request.merge_commit_sha }} "
+          echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
+          echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+          echo "-----------------------------------"
+          cat $GITHUB_EVENT_PATH
+
