@@ -12,9 +12,9 @@ on:
         required: true
       pscale-token-id:
         required: true
-      vercel-token:
-        required: true
       pscale-src-db-url:
+        required: false
+      vercel-token:
         required: true
 
 env:

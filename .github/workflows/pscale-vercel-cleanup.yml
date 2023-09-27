@@ -13,7 +13,7 @@ on:
       pscale-token-id:
         required: true
       pscale-src-branch-db-url:
-        required: true
+        required: false
       vercel-token:
         required: true
 

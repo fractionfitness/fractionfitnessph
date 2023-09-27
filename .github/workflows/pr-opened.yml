@@ -48,5 +48,5 @@ jobs:
     secrets:
       pscale-token: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
       pscale-token-id: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-      pscale-src-db-url: ${{ secrets.PSCALE_SRC_BRANCH_DATABASE_URL }}
       vercel-token: ${{ secrets.VERCEL_TOKEN }}
+      # no pscale-src-db-url for deployments to staging
