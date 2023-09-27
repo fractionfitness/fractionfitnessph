@@ -70,8 +70,8 @@ jobs:
         run: |
           GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
-          check_staging=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -w \"staging\" || true ")
-          if [ "$check_staging" == "true" ]; then
+          check_staging=$(eval "echo \"$GITHUB_BRANCH_NAME\" | grep -ow \"staging\" || true ")
+          if [ "$check_staging" == "staging" ]; then
             STAGING=true
           else
             STAGING=false
@@ -384,10 +384,6 @@ jobs:
           branch_name: ${{ env.PSCALE_BRANCH_NAME }}
           deploy_to: ${{ env.PSCALE_SRC_BRANCH }}
 
-      - name: Enable Gated Deployments (Disable Auto Apply) for PRs into main
-        if: env.STAGING == 'true'
-        run: pscale deploy-request edit ${{ env.PSCALE_DB_NAME }} ${{ env.EXISTING_DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --auto-apply "disable"
-
       - name: Get Current Deploy Request Number
         id: deploy_request
         run: |
@@ -404,13 +400,20 @@ jobs:
           echo "tests---------------------------------------------------"
 
           if [ -n "${CREATED_DR_NUMBER}" ]; then
-            echo "DR_NUMBER: ${CREATED_DR_NUMBER}"
+            CURRENT_DR_NUMBER="${CREATED_DR_NUMBER}"
           elif [[ -n "${EXISTING_DR_NUMBER}" && "${EXISTING_DR_STATE}" == "open" ]]; then
-            echo "DR_NUMBER: ${EXISTING_DR_NUMBER}"
+            CURRENT_DR_NUMBER="${EXISTING_DR_NUMBER}"
           else
             echo "Error: No Open Deploy Request found or created for the Planetscale Branch."
             exit 1
           fi
+
+          echo "CURRENT_DR_NUMBER: ${CURRENT_DR_NUMBER}"
+          echo "CURRENT_DR_NUMBER=${CURRENT_DR_NUMBER}" >> "${GITHUB_OUTPUT}"
+
+      - name: Enable Gated Deployments (Disable Auto Apply) for PRs into main
+        if: env.STAGING == 'true'
+        run: pscale deploy-request edit ${{ env.PSCALE_DB_NAME }} ${{ steps.deploy_request.outputs.CURRENT_DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }} --auto-apply "disable"
 
   prechecks-pr-merge:
     if: ${{ !failure() && needs.setup.outputs.DB_CHANGES == 'true' }}
