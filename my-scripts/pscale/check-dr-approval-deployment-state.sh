@@ -1,16 +1,30 @@
 #!/bin/bash
 
-if [[ "$EXISTS" == "true" && "$STATE" == "open" && "$APPROVED" == "Yes" && "$DEPLOY_STATE" == "ready" && "$DEPLOYABLE" == "Yes" ]]; then
-  echo "Planetscale Deploy Request is already Approved and ready for Deployment"
-  DEPLOY_DR="true"
-  # no need to approve an already approved DR
-  APPROVE_DR="false"
+# if DR can be approved, already aproved, or can be deployed, and is already deployed
+if [[ "$EXISTS" == "true" && "$DEPLOYABLE" == "Yes" ]]; then
+  if [ "$STATE" == "open" ]; then
+    if [[ "$APPROVED" == "No" && "$DEPLOY_STATE" == "ready" ]]; then
+      echo "Planetscale Deploy Request is ready for Approval."
+      DEPLOY_DR="true"
+      APPROVE_DR="true"
+    elif [[ "$APPROVED" == "Yes" && "$DEPLOY_STATE" == "ready" ]]; then
+      echo "Planetscale Deploy Request was already Approved and is ready for Deployment."
+      DEPLOY_DR="true"
+      # no need to approve an already approved DR
+      APPROVE_DR="false"
+    elif [[ "$APPROVED" == "Yes" && "$DEPLOY_STATE" == "complete_pending_revert" ]]; then
+      echo "Planetscale Deploy Request was already Approved and Deployment awaiting Schema Revert/Skip."
+      DEPLOY_DR="false"
+      APPROVE_DR="false"
+    fi
 
-elif [[ "$EXISTS" == "true" && "$STATE" == "open" && "$APPROVED" == "No" && "$DEPLOY_STATE" == "ready" && "$DEPLOYABLE" == "Yes" ]]; then
-  echo "Planetscale Deploy Request is ready for Approval."
-  DEPLOY_DR="true"
-  APPROVE_DR="true"
+  elif [[ "$STATE" == "closed" && "$APPROVED" == "Yes" && "$DEPLOY_STATE" == "complete" ]]; then
+    echo "Planetscale Deploy Request was already Approved and completely Deployed."
+    DEPLOY_DR="false"
+    APPROVE_DR="false"
+  fi
 
+# if DR cannot be deployed
 else
   echo "Resolve the following Planetscale Deploy Request Issues:"
   if [ "$EXISTS" != "true" ]; then
