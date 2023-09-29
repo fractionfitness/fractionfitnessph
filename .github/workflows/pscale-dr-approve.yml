@@ -59,6 +59,7 @@ jobs:
         run: |
           output=$(eval "pscale branch list ${{ env.PSCALE_DB_NAME }} --org ${{ env.PSCALE_ORG_NAME }} | grep -w \"${{ steps.shortened_gh_branch_name.outputs.SHORTENED_GH_BRANCH_NAME }}\" | awk -F' ' '{print \$1}' " 2>&1)
 
+          echo "PSCALE_BRANCH_NAME: ${output}"
           echo "PSCALE_BRANCH_NAME=$output" >> "$GITHUB_OUTPUT"
 
           echo "Step Outputs: PSCALE_BRANCH_NAME"
