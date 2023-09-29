@@ -239,6 +239,7 @@ jobs:
         if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
+      # cannot separate this step into another job because need it to run, only after deleting the pscale branch and other steps do not fail
       - name: Cache Cleanup (delete caches generated from the Opened PR Workflow)
         run: |
           curl -L \
@@ -262,62 +263,14 @@ jobs:
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=deps-node-modules-${{ hashFiles('package-lock.json') }}"
 
-  # gh-cache-cleanup:
-  #   needs: setup
-  #   runs-on: ubuntu-latest
-  #   environment: ${{ inputs.gh-environment }}
-  #   env:
-  #     EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
-  #     EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
-  #     # always run this, even if pr was not merged, to be able to clean up cache
-  #     # - name: Install NodeJS
-  #     #   id: install_nodejs
-  #     #   uses: actions/setup-node@v3
-  #     #   with:
-  #     #     node-version: ${{ env.NODE_VERSION }}
-  #     #     # cache: 'npm'
-  #     #     # cache-dependency-path: 'package-lock.json'
-
-  #     #     # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
-
-  #     # # always run this, even if pr was not merged, to be able to clean up cache
-  #     # # only use actions/cache/restore since we don't want to store a cache when pr is closed and have to manually delete it later
-  #     # - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
-  #     #   id: cache_deps
-  #     #   uses: actions/cache/restore@v3
-  #     #   with:
-  #     #     path: ./node_modules
-  #     #     key: deps-node-modules-${{ hashFiles('package-lock.json') }}
-
-  #     # - name: Install dependencies to enable Prisma DB Seed and Cache Cleanup
-  #     #   if: steps.cache_deps.outputs.cache-hit != 'true'
-  #     #   id: install_deps
-  #     #   run: npm ci
-  #     - name: Cache Cleanup (delete caches generated from the Opened PR Workflow)
-  #       run: |
-  #         curl -L \
-  #         -X DELETE \
-  #         -H "Accept: application/vnd.github+json" \
-  #         -H "Authorization: Bearer ${{ github.token }}" \
-  #         -H "X-GitHub-Api-Version: 2022-11-28" \
-  #         "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}"
-
-  #         curl -L \
-  #         -X DELETE \
-  #         -H "Accept: application/vnd.github+json" \
-  #         -H "Authorization: Bearer ${{ github.token }}" \
-  #         -H "X-GitHub-Api-Version: 2022-11-28" \
-  #         "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=node-cache-Linux-npm-${{ hashFiles('package-lock.json') }}"
-
-  #         curl -L \
-  #         -X DELETE \
-  #         -H "Accept: application/vnd.github+json" \
-  #         -H "Authorization: Bearer ${{ github.token }}" \
-  #         -H "X-GitHub-Api-Version: 2022-11-28" \
-  #         "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=deps-node-modules-${{ hashFiles('package-lock.json') }}"
+      # only delete if not merging into main
+      - name: Delete Remote Github Branch
+        if: github.base_ref != 'main'
+        run: |
+          git fetch
+          git branch
+          git push origin --delete ${{ github.head_ref }}
+          git branch -r
 
   vercel-cleanup:
     needs: setup
