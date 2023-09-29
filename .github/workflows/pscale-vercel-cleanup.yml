@@ -140,10 +140,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          # cache: 'npm'
+          # cache-dependency-path: 'package-lock.json'
 
           # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
+          # install_nodejs only takes 4 secs w/o cache so not that time consuming | checking cache actually takes longer
 
       # always run this, even if pr was not merged, to be able to clean up cache
       # only use actions/cache/restore since we don't want to store a cache when pr is closed and have to manually delete it later
@@ -154,8 +155,10 @@ jobs:
           path: ./node_modules
           key: deps-node-modules-${{ hashFiles('package-lock.json') }}
 
+      # if no cache, then no need to install deps to generate hasf key to clear it
+      # if merging into main, no need to install to run "prisma db seed"
       - name: Install dependencies to enable Prisma DB Seed
-        if: steps.cache_deps.outputs.cache-hit != 'true'
+        if: github.base_ref != 'main' && steps.cache_deps.outputs.cache-hit != 'true'
         id: install_deps
         run: npm ci
 
@@ -191,7 +194,7 @@ jobs:
       # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
       # only run if deployable and approved
       - name: Deploy Deploy Request
-        if: github.event.pull_request.merged == true && steps.dr_deployable.outputs.DEPLOY_DR == 'true' && steps.existing_dr.outputs.DR_APPROVED == 'Yes'
+        if: github.base_ref != 'main' && github.event.pull_request.merged == true && steps.dr_deployable.outputs.DEPLOY_DR == 'true' && steps.existing_dr.outputs.DR_APPROVED == 'Yes'
         id: deploy_dr
         uses: planetscale/deploy-deploy-request-action@v3
         with:
@@ -199,6 +202,16 @@ jobs:
           database_name: ${{ env.PSCALE_DB_NAME }}
           number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
           wait: true
+
+      # does not wait since DRs on staging branch are gated deployments and schema revert is not automatically skipped
+      - name: Deploy Deploy Request on Staging
+        if: github.base_ref == 'main' && github.event.pull_request.merged == true && steps.dr_deployable.outputs.DEPLOY_DR == 'true' && steps.existing_dr.outputs.DR_APPROVED == 'Yes'
+        id: deploy_dr_staging
+        uses: planetscale/deploy-deploy-request-action@v3
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
 
         # have to check if deploy_dr step executed successfully since can be skipped if no existing DR
       - name: Skip Revert Pscale Deploy Request
@@ -232,14 +245,8 @@ jobs:
 
         # run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npm run db:reset
 
-      # should not delete until db seed was successful, otherwise, cannot rerun workflow if db seed fails
-      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main and no DR exists (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
-      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main') }}
-      - name: Delete Pscale Branch
-        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
-        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
-
       # cannot separate this step into another job because need it to run, only after deleting the pscale branch and other steps do not fail
+      # should only run when prisma db seed is successful or skipped
       - name: Cache Cleanup (delete caches generated from the Opened PR Workflow)
         run: |
           curl -L \
@@ -263,14 +270,29 @@ jobs:
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=deps-node-modules-${{ hashFiles('package-lock.json') }}"
 
-      # only delete if not merging into main
+      # should not delete pscale branch until db seed was successful, github branch was deleted, and cache cleared, otherwise, cannot rerun workflow if db seed fails and will have issues clearing cache if gated deployment for pr merge into main (staging branch)
+      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main and no DR exists (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
+      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main') }}
+      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
+      - name: Delete Pscale Branch
+        # we want this step to error out if DR deployment is still on-going/open (e.g. gated deployments and schema revert not skipped for staging branch DRs)
+        # we can just rerun job if it fails
+        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' }}
+        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
+
+      # only delete if not merging into main, remote branch exists, and delete pscale branch was successful/skipped
+      # need to delete through gh actions to prevent failed workflow on successful pr merge (closed) because this workfow will fail if branch does not exist, since it will violate branch protection rule (only matching branches can be deployed) for targeted gh environments
       - name: Delete Remote Github Branch
         if: github.base_ref != 'main'
         run: |
           git fetch
-          git branch
-          git push origin --delete ${{ github.head_ref }}
           git branch -r
+          check_remote=$(eval "git branch -r | grep -ow ${{ github.head_ref }} || true ")
+          echo "check_remote: $check_remote"
+          if [ "$check_remote" == "${{ github.head_ref }}" ]; then
+            git push origin --delete ${{ github.head_ref }}
+            git branch -r
+          fi
 
   vercel-cleanup:
     needs: setup
