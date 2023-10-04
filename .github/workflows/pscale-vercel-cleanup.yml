@@ -119,7 +119,7 @@ jobs:
   pscale-deploy-dr-cleanup:
     # if: needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main'
     # if: ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true' && (needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main') }}
-    if: needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true'
+    # if: needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true'
     needs: setup
     runs-on: ubuntu-latest
     environment: ${{ inputs.gh-environment }}
@@ -128,6 +128,7 @@ jobs:
       PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
       PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
       PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      DB_CHANGES: ${{ needs.setup.outputs.DB_CHANGES }}
       PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
       PSCALE_BRANCH_EXISTS: ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS }}
       EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
@@ -146,17 +147,19 @@ jobs:
           # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
           # install_nodejs only takes 4 secs w/o cache so not that time consuming | checking cache actually takes longer
 
-      # always run this, even if pr was not merged, to be able to clean up cache
+      # always run this if pscale branch exists, even if pr was not merged, to be able to clean up cache
+      # staging branch deployment will have a pscale branch even if there are no db changes
       # only use actions/cache/restore since we don't want to store a cache when pr is closed and have to manually delete it later
       - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
+        if: env.PSCALE_BRANCH_EXISTS == 'true'
         id: cache_deps
         uses: actions/cache/restore@v3
         with:
           path: ./node_modules
           key: deps-node-modules-${{ hashFiles('package-lock.json') }}
 
-      # if no cache, then no need to install deps to generate hasf key to clear it
-      # if merging into main, no need to install to run "prisma db seed"
+      # if no cache, then no need to install deps to generate hash key to clear it
+      # if merging into main and no db changes, no need to install since we dont run "prisma db seed" on the pscale main branch
       - name: Install dependencies to enable Prisma DB Seed
         if: github.base_ref != 'main' && steps.cache_deps.outputs.cache-hit != 'true'
         id: install_deps
@@ -166,9 +169,11 @@ jobs:
         # pkg-lock.json is dependent on what is installed
 
       - name: Planetscale Setup
+        if: env.PSCALE_BRANCH_EXISTS == 'true'
         id: pscale_setup
         uses: planetscale/setup-pscale-action@v1
       - name: Get Pscale DR info for Branch, if exists
+        if: env.DB_CHANGES == 'true'
         id: existing_dr
         working-directory: ./my-scripts/pscale/
         run: |
@@ -277,7 +282,7 @@ jobs:
       - name: Delete Pscale Branch
         # we want this step to error out if DR deployment is still on-going/open (e.g. gated deployments and schema revert not skipped for staging branch DRs)
         # we can just rerun job if it fails
-        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' }}
+        if: env.PSCALE_BRANCH_EXISTS == 'true'
         run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
 
       # only delete if not merging into main, remote branch exists, and delete pscale branch was successful/skipped
