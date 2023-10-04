@@ -1,0 +1,322 @@
+name: Planetscale Deploy + Cleanup ((Deploy DR, Delete Branch, DB Seed) & Vercel + Github Cleanup (Delete Vercel Env Var on PR Head Branch, Delete GH Caches)
+
+on:
+  workflow_call:
+    inputs:
+      gh-environment:
+        description: Github environment
+        required: true
+        type: string
+    secrets:
+      pscale-token:
+        required: true
+      pscale-token-id:
+        required: true
+      pscale-src-branch-db-url:
+        required: false
+      vercel-token:
+        required: true
+
+env:
+  NODE_VERSION: 18.13.0
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.gh-environment }}
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.pscale-token-id }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      PSCALE_PWORD_ROLE: ${{ vars.PSCALE_PWORD_ROLE }}
+    outputs:
+      DB_CHANGES: ${{ steps.db_changes.outputs.DB_CHANGES }}
+      PSCALE_BRANCH_NAME: ${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+      PSCALE_BRANCH_EXISTS: ${{ steps.branch_exists.outputs.PSCALE_BRANCH_EXISTS }}
+      EXISTING_PWORD_NAME: ${{ steps.existing_pword.outputs.EXISTING_PWORD_NAME }}
+      EXISTING_PWORD_ID: ${{ steps.existing_pword.outputs.EXISTING_PWORD_ID }}
+    steps:
+      # - name: Check github context values
+      #   run: |
+      #     echo "github.base_ref ${{ github.base_ref }}"
+      #     echo "github.event.pull_request.head.ref ${{ github.event.pull_request.head.ref }}"
+      #     echo "github.event.pull_request.base.ref ${{ github.event.pull_request.base.ref }}"
+      #     echo "github.head_ref ${{ github.head_ref }}"
+      #     echo "github.base_ref ${{ github.base_ref }}"
+      #     echo "github.event.pull_request.merge_commit_sha ${{ github.event.pull_request.merge_commit_sha }} "
+      #     echo "GITHUB_CONTEXT: $GITHUB_CONTEXT"
+      #     echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Make shell scripts executable
+        run: chmod -R +x ./my-scripts/
+      - name: Get Github Branch Name
+        id: gh_branch_check
+        run: |
+          GITHUB_BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          echo "GITHUB_BRANCH_NAME=$GITHUB_BRANCH_NAME" >> "${GITHUB_OUTPUT}"
+      - name: Check DB changes on PR (Head vs. Base)
+        id: db_changes
+        working-directory: ./my-scripts/pscale/
+        run: |
+          MERGE_COMMIT=${{ github.event.pull_request.merge_commit_sha }}
+          COMMIT_ON_BASE=${{ github.event.pull_request.base.sha }}
+
+          source ./check-db-changes.sh $MERGE_COMMIT $COMMIT_ON_BASE
+
+          echo "DB_CHANGES: ${DB_CHANGES}"
+          echo "ERROR: $ERROR"
+          echo "DB_CHANGES=${DB_CHANGES}" >> "${GITHUB_OUTPUT}"
+          echo "ERROR=${ERROR}" >> "${GITHUB_OUTPUT}"
+
+        # COMMIT_ON_HEAD=${{ github.event.pull_request.head.sha }}
+      - name: Planetscale Setup
+        if: steps.db_changes.outputs.DB_CHANGES == 'true' || github.base_ref == 'main'
+        id: pscale_setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Get Pscale Branch Name
+        if: steps.pscale_setup.outcome == 'success'
+        id: branch_name
+        working-directory: ./my-scripts/pscale/
+        shell: bash
+        run: |
+          GITHUB_BRANCH_NAME=${{ steps.gh_branch_check.outputs.GITHUB_BRANCH_NAME }}
+          GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}
+
+          ./get-pscale-branch-name.sh $GITHUB_BRANCH_NAME $GITHUB_PR_NUMBER
+
+          echo "outputs: PSCALE_BRANCH_NAME / SHORTENED_GH_BRANCH_NAME"
+      - name: Check if Pscale Branch already exists
+        if: steps.branch_name.outcome == 'success'
+        id: branch_exists
+        working-directory: ./my-scripts/pscale/
+        run: |
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+          ./check-branch-exists.sh $PSCALE_DB_NAME $PSCALE_ORG_NAME $PSCALE_BRANCH_NAME
+
+          echo "outputs: PSCALE_BRANCH_EXISTS"
+      - name: Get Branch Password if exists
+        if: steps.branch_exists.outputs.PSCALE_BRANCH_EXISTS == 'true'
+        id: existing_pword
+        shell: bash
+        working-directory: ./my-scripts/pscale/
+        run: |
+          PSCALE_BRANCH_NAME=${{ steps.branch_name.outputs.PSCALE_BRANCH_NAME }}
+          PSCALE_PWORD_NAME=${PSCALE_BRANCH_NAME}-${{ env.PSCALE_PWORD_ROLE }}
+
+          source ./get-pword-info.sh ${{ env.PSCALE_DB_NAME }} ${PSCALE_BRANCH_NAME} ${{ env.PSCALE_ORG_NAME }} ${PSCALE_PWORD_NAME}
+
+          echo "Step Outputs:"
+          echo "EXISTING_PWORD_ID: ${PWORD_ID}"
+          echo "EXISTING_PWORD_NAME: ${PWORD_NAME}"
+
+          echo "EXISTING_PWORD_ID=${PWORD_ID}" >> $GITHUB_OUTPUT
+          echo "EXISTING_PWORD_NAME=${PWORD_NAME}" >> $GITHUB_OUTPUT
+
+  pscale-deploy-dr-cleanup:
+    # if: needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main'
+    # if: ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true' && (needs.setup.outputs.DB_CHANGES == 'true' || github.base_ref == 'main') }}
+    if: needs.setup.outputs.PSCALE_BRANCH_EXISTS == 'true'
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.gh-environment }}
+    env:
+      PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.pscale-token-id }}
+      PLANETSCALE_SERVICE_TOKEN: ${{ secrets.pscale-token }}
+      PSCALE_ORG_NAME: ${{ vars.PSCALE_ORG_NAME }}
+      PSCALE_DB_NAME: ${{ vars.PSCALE_DB_NAME }}
+      PSCALE_BRANCH_NAME: ${{ needs.setup.outputs.PSCALE_BRANCH_NAME }}
+      PSCALE_BRANCH_EXISTS: ${{ needs.setup.outputs.PSCALE_BRANCH_EXISTS }}
+      EXISTING_PWORD_NAME: ${{ needs.setup.outputs.EXISTING_PWORD_NAME }}
+      EXISTING_PWORD_ID: ${{ needs.setup.outputs.EXISTING_PWORD_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install NodeJS
+        id: install_nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # cache: 'npm'
+          # cache-dependency-path: 'package-lock.json'
+
+          # don't use cache since we don't want to store a cache when pr is closed and have to manually delete it later
+          # install_nodejs only takes 4 secs w/o cache so not that time consuming | checking cache actually takes longer
+
+      # always run this, even if pr was not merged, to be able to clean up cache
+      # only use actions/cache/restore since we don't want to store a cache when pr is closed and have to manually delete it later
+      - name: Check Cache for dependencies needed for Prisma DB push and Seed/Reset
+        id: cache_deps
+        uses: actions/cache/restore@v3
+        with:
+          path: ./node_modules
+          key: deps-node-modules-${{ hashFiles('package-lock.json') }}
+
+      # if no cache, then no need to install deps to generate hasf key to clear it
+      # if merging into main, no need to install to run "prisma db seed"
+      - name: Install dependencies to enable Prisma DB Seed
+        if: github.base_ref != 'main' && steps.cache_deps.outputs.cache-hit != 'true'
+        id: install_deps
+        run: npm ci
+
+        # better to use "npm ci" vs "npm install prisma ts-node tsconfig-paths" so that we get the correct cache keys for pkg-lock.json to delete them on the last step of this workflow
+        # pkg-lock.json is dependent on what is installed
+
+      - name: Planetscale Setup
+        id: pscale_setup
+        uses: planetscale/setup-pscale-action@v1
+      - name: Get Pscale DR info for Branch, if exists
+        id: existing_dr
+        working-directory: ./my-scripts/pscale/
+        run: |
+          ./check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_BRANCH_NAME}" "${PSCALE_ORG_NAME}"
+
+          echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+
+      - name: Check if Open DR has schema changes and is deployable
+        if: github.event.pull_request.merged == true && steps.existing_dr.outputs.DR_STATE == 'open'
+        id: dr_deployable
+        working-directory: ./my-scripts/pscale/
+        run: |
+          EXISTS=${{ steps.existing_dr.outputs.DR_EXISTS }}
+          STATE=${{ steps.existing_dr.outputs.DR_STATE }}
+          APPROVED=${{ steps.existing_dr.outputs.DR_APPROVED }}
+          DEPLOY_STATE=${{ steps.existing_dr.outputs.DR_DEPLOY_STATE }}
+          DEPLOYABLE=${{ steps.existing_dr.outputs.DR_DEPLOYABLE }}
+
+          source ./check-dr-approval-deployment-state.sh
+
+          echo "Step Outputs: DEPLOY_DR / APPROVE_DR"
+
+      # github.event.pull_request.merged needs to be a boolean value, unless enclosed in ${{ }} w/c converts it into a string
+      # only run if deployable and approved
+      - name: Deploy Deploy Request
+        if: github.base_ref != 'main' && github.event.pull_request.merged == true && steps.dr_deployable.outputs.DEPLOY_DR == 'true' && steps.existing_dr.outputs.DR_APPROVED == 'Yes'
+        id: deploy_dr
+        uses: planetscale/deploy-deploy-request-action@v3
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
+          wait: true
+
+      # does not wait since DRs on staging branch are gated deployments and schema revert is not automatically skipped
+      - name: Deploy Deploy Request on Staging
+        if: github.base_ref == 'main' && github.event.pull_request.merged == true && steps.dr_deployable.outputs.DEPLOY_DR == 'true' && steps.existing_dr.outputs.DR_APPROVED == 'Yes'
+        id: deploy_dr_staging
+        uses: planetscale/deploy-deploy-request-action@v3
+        with:
+          org_name: ${{ env.PSCALE_ORG_NAME }}
+          database_name: ${{ env.PSCALE_DB_NAME }}
+          number: ${{ steps.existing_dr.outputs.DR_NUMBER }}
+
+        # have to check if deploy_dr step executed successfully since can be skipped if no existing DR
+      - name: Skip Revert Pscale Deploy Request
+        if: github.base_ref != 'main' && steps.deploy_dr.outcome == 'success'
+        run: pscale deploy-request skip-revert ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
+
+      # no need to check DR if State=closed, can be closed regardless of state
+      # only runs when pr is not merged
+      - name: Close Pscale Deploy Request
+        if: github.event.pull_request.merged == false && steps.existing_dr.outputs.DR_EXISTS == 'true' && steps.existing_dr.outputs.DR_STATE == 'open'
+        run: pscale deploy-request close ${{ env.PSCALE_DB_NAME }} ${{ steps.existing_dr.outputs.DR_NUMBER }} --org ${{ env.PSCALE_ORG_NAME }}
+
+      # should always run
+      - name: Check existing Pscale DR_STATE if 'closed' and DR_DEPLOY_STATE is 'complete'
+        if: steps.existing_dr.outputs.DR_EXISTS == 'true'
+        id: dr_state
+        working-directory: ./my-scripts/pscale/
+        run: |
+          ./check-dr-exists.sh "${PSCALE_DB_NAME}" "${PSCALE_BRANCH_NAME}" "${PSCALE_ORG_NAME}"
+
+          echo "step outputs: DR_EXISTS | DR_NUMBER | DR_BRANCH | DR_INTO_BRANCH | DR_APPROVED | DR_STATE | DR_DEPLOY_STATE | DR_DEPLOYABLE"
+
+      # NOTE: CONTRIBUTOR MUST COMMIT AN UPDATED SEED FILE FOR DEV DB, BEFORE PR MERGE, WHENEVER THERE ARE DB CHANGES
+      # better to check if DR_STATE=closed and DR_DEPLOY_STATE=complete??? steps.deploy_dr.outcome=='success' looks to be sufficient since deploy_dr will wait until DR deployment has completed/merged before exiting but this step will be skipped when workflow is rerun because deploy_dr step will also be skipped
+      # if: ${{ github.event.pull_request.merged == true && (github.base_ref == 'merge' || github.base_ref == 'dev') && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete' }}
+      # if: github.base_ref != 'main' && steps.deploy_dr.outcome == 'success'
+      - name: Prisma DB Seed
+        # more flexible since we can rerun db seed even when deploy_dr is skipped (i.e., already deployed in a previous workflow run)
+        if: github.event.pull_request.merged == true && github.base_ref != 'main' && steps.dr_state.outputs.DR_STATE == 'closed' && steps.dr_state.outputs.DR_DEPLOY_STATE == 'complete'
+        run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npx prisma db seed
+
+        # run: DATABASE_URL=${{ secrets.pscale-src-branch-db-url }} npm run db:reset
+
+      # cannot separate this step into another job because need it to run, only after deleting the pscale branch and other steps do not fail
+      # should only run when prisma db seed is successful or skipped
+      - name: Cache Cleanup (delete caches generated from the Opened PR Workflow)
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ github.token }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=${{ env.EXISTING_PWORD_NAME }}-${{ env.EXISTING_PWORD_ID }}"
+
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ github.token }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=node-cache-Linux-npm-${{ hashFiles('package-lock.json') }}"
+
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ github.token }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=deps-node-modules-${{ hashFiles('package-lock.json') }}"
+
+      # should not delete pscale branch until db seed was successful, github branch was deleted, and cache cleared, otherwise, cannot rerun workflow if db seed fails and will have issues clearing cache if gated deployment for pr merge into main (staging branch)
+      # should always run when pull_request is closed (whether merged or not) and DR_STATE is closed (whether DEPLOY_State=complete or not) OR when PR into main and no DR exists (i.e. merging staging into main branch), since workflow will always create a pscale branch, whether there are db changes or not
+      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || github.base_ref == 'main') }}
+      # if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' && (steps.dr_state.outputs.DR_STATE == 'closed' || (github.base_ref == 'main' && steps.dr_state.outputs.DR_EXISTS != 'true')) }}
+      - name: Delete Pscale Branch
+        # we want this step to error out if DR deployment is still on-going/open (e.g. gated deployments and schema revert not skipped for staging branch DRs)
+        # we can just rerun job if it fails
+        if: ${{ env.PSCALE_BRANCH_EXISTS == 'true' }}
+        run: pscale branch delete ${{ env.PSCALE_DB_NAME }} ${{ env.PSCALE_BRANCH_NAME }} --org ${{ env.PSCALE_ORG_NAME }} --force
+
+      # only delete if not merging into main, remote branch exists, and delete pscale branch was successful/skipped
+      # need to delete through gh actions to prevent failed workflow on successful pr merge (closed) because this workfow will fail if branch does not exist, since it will violate branch protection rule (only matching branches can be deployed) for targeted gh environments
+      - name: Delete Remote Github Branch
+        if: github.base_ref != 'main'
+        run: |
+          git fetch
+          git branch -r
+          check_remote=$(eval "git branch -r | grep -ow ${{ github.head_ref }} || true ")
+          echo "check_remote: $check_remote"
+          if [ "$check_remote" == "${{ github.head_ref }}" ]; then
+            git push origin --delete ${{ github.head_ref }}
+            git branch -r
+          fi
+
+  vercel-cleanup:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.gh-environment }}
+    env:
+      VERCEL_ENV: ${{ vars.VERCEL_ENV }}
+      GITHUB_BRANCH_NAME: ${{ github.head_ref }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Make shell scripts executable
+        run: chmod -R +x ./my-scripts/vercel/
+      - name: Vercel CLI Setup & Vercel Env Var DATABASE_URL check
+        id: vercel_setup
+        run: |
+          npm install --global vercel@latest
+
+          vercel pull --yes --environment ${{ env.VERCEL_ENV }} --token ${{ secrets.vercel-token }}
+
+          source ./my-scripts/vercel/check-vercel-env.sh ${{ env.VERCEL_ENV }} ${{ env.GITHUB_BRANCH_NAME }} ${{ secrets.vercel-token }} "DATABASE_URL"
+
+          echo "DATABASE_URL exists? $EXISTS"
+          echo "DATABASE_URL_EXISTS=${EXISTS}" >> "${GITHUB_OUTPUT}"
+      - name: Delete DATABASE_URL from Vercel's Environment Variables for Github Branch
+        if: steps.vercel_setup.outputs.DATABASE_URL_EXISTS == 'true'
+        run: vercel env rm --yes DATABASE_URL ${{ env.VERCEL_ENV }} ${{ env.GITHUB_BRANCH_NAME }} --token ${{ secrets.vercel-token }}
