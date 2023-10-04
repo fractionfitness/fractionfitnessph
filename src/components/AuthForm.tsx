@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Card from './Shared/Card';
 import Input from './Shared/Input';
 import Button from './Shared/Button';
-import { register } from '@/src/lib/apiCalls';
+import { register } from '@/lib/apiCalls';
 
 const registerContent = {
   linkUrl: '/api/auth/signin',

@@ -1,9 +1,11 @@
-import type { NextAuthOptions } from 'next-auth';
+import 'server-only';
+
+import { getServerSession, type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 // import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { hash, compare } from 'bcrypt';
 
-import prisma from '@/src/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export async function hashPassword(password) {
   return await hash(password, 12);
@@ -144,3 +146,5 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 };
+
+export const getAuthSession = () => getServerSession(authOptions);

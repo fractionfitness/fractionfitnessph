@@ -22,7 +22,8 @@
     "paths": {
       // "@/*": ["./src/*"], // create-next-app configuration
       // "@/*": ["./*"], // using this alone eliminates the need for all paths below
-      "@/src/*": ["./src/*"],
+      // "@/src/*": ["./src/*"],
+      "@/*": ["./src/*"],
       "@/prisma/*": ["./prisma/*"],
       "@/public/*": ["./public/*"]
     },

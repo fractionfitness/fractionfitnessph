@@ -1,6 +1,21 @@
 import fs from 'fs';
 import path from 'path';
-import prisma from '@/src/lib/prisma';
+
+//-----------------------------------------------------------------------------
+// new prisma instantiation since /src/lib/prisma.ts is a server-only module
+import { PrismaClient } from '@prisma/client';
+
+declare global {
+  // eslint-disable-next-line no-var
+  var cachedPrisma: PrismaClient;
+}
+
+let prisma: PrismaClient;
+if (!global.cachedPrisma) {
+  global.cachedPrisma = new PrismaClient();
+}
+prisma = global.cachedPrisma;
+//-----------------------------------------------------------------------------
 
 const p = path.join(
   path.dirname(require.main.filename),
