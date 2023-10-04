@@ -27,9 +27,19 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# other env files
+.env
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# https://github.com/nektos/act
+# Run Github Actions locally
+act/
+
+# Github Actions reference files
+references/
