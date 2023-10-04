@@ -1,0 +1,201 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+enum UserRole {
+  USER
+  DEV
+  ADMIN
+}
+
+enum EmployeeRole {
+  OWNER
+  ADMIN
+  STAFF
+  VOLUNTEER
+}
+
+enum MemberRole {
+  COACH
+  MEMBER
+  VISITOR
+}
+
+enum Day {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+// UserProfile 1?:1 Employees m?:1 Members m?:1 Group m?:1
+model User {
+  id          Int          @id @default(autoincrement())
+  email       String       @unique
+  password    String?
+  role        UserRole     @default(USER)
+  profile     UserProfile?
+  employments Employee[]
+  memberships Member[]
+  groups      Group[]
+}
+
+// User 1:1
+model UserProfile {
+  id          Int     @id @default(autoincrement())
+  user        User    @relation(fields: [user_id], references: [id])
+  user_id     Int     @unique
+  first_name  String
+  middle_name String
+  last_name   String
+  suffix_name String?
+  full_name   String  @unique
+
+  // @@index(fields: [user_id]) // no need since already have a @unique constraint w/c creates an index
+  // @unique on a computed value might not be allowed
+  // use dbgenerated() to use a mysql function for full_name
+  @@unique([first_name, middle_name, last_name, suffix_name])
+}
+
+// choose either @@unique and @unique to implement since full_name is just computed | which is better?
+
+// GroupProfile 1?:1 Employees m?:1 Members m?:1 User 1:m?
+model Group {
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  profile     GroupProfile?
+  employees Employee[]
+  members Member[]
+  parents     GroupRelation[] @relation(name: "child")
+  children    GroupRelation[] @relation(name: "parent")
+  sessions    Session[]
+  owner       User            @relation(fields: [owner_id], references: [id])
+  owner_id    Int
+
+  @@index([owner_id])
+}
+
+// Group 1:1
+model GroupProfile {
+  id       Int     @id @default(autoincrement())
+  group    Group   @relation(fields: [group_id], references: [id])
+  group_id Int     @unique
+  type     String?
+  country  String
+}
+
+// User 1:m Group 1:m
+model Employee {
+  // id       Int          @id @default(autoincrement())
+  user     User         @relation(fields: [user_id], references: [id])
+  user_id  Int
+  group    Group        @relation(fields: [group_id], references: [id])
+  group_id Int
+  role     EmployeeRole @default(STAFF)
+  // @@unique(fields: [user_id, group_id])
+
+  @@id(fields: [user_id, group_id])
+  // need to index user and group ids individually?
+  @@index(fields: [user_id]) // still needed for faster queries?
+  @@index(fields: [group_id]) // still needed for faster queries?
+}
+
+// User 1:m Group 1:m
+model Member {
+  // better to make Member pk (id) a composite of user_id and group_id, in the same manner as Employees?
+  id       Int        @id @default(autoincrement())
+  user     User       @relation(fields: [user_id], references: [id])
+  user_id  Int
+  group    Group      @relation(fields: [group_id], references: [id])
+  group_id Int
+  checkins Checkin[]
+  role     MemberRole @default(MEMBER)
+
+  // @@id(fields: [user_id, group_id])
+  @@unique(fields: [user_id, group_id])
+  // need to index user and group ids individually?
+  @@index(fields: [user_id]) // still needed for faster queries?
+  @@index(fields: [group_id]) // still needed for faster queries?
+}
+
+// Group (Parent) 1:m Group (Child) 1:m | m:m self-relation
+model GroupRelation {
+  // id        Int   @id @default(autoincrement())
+  parent    Group @relation(name: "parent", fields: [parent_id], references: [id])
+  parent_id Int
+  child     Group @relation(name: "child", fields: [child_id], references: [id])
+  child_id  Int
+  // @@unique(fields: [parent_id, child_id])
+
+  @@id([parent_id, child_id])
+  // need to index user and group ids individually?
+  @@index(fields: [parent_id]) // still needed for faster queries?
+  @@index(fields: [child_id]) // still needed for faster queries?
+}
+
+// Group 1:m
+model Session {
+  id       Int       @id @default(autoincrement())
+  group    Group     @relation(fields: [group_id], references: [id])
+  group_id Int
+  checkins Checkin[]
+  name     String
+  start_at DateTime  @db.Time()
+  end_at   DateTime  @db.Time()
+  day      Day
+  status   String    @default("active") // other statuses are inactive, cancelled/deleted/discontinued
+
+  // @@id(fields: [group_id, name, day])
+  @@unique(fields: [group_id, name, day])
+  // need to index user and group ids individually?
+  @@index(fields: [group_id]) // still needed?
+  @@index(fields: [name]) // still needed?
+  @@index(fields: [day]) // still needed?
+  @@index(fields: [group_id, day]) // still needed?
+}
+
+// Session 1:m Members 1:m
+model Checkin {
+  id            Int        @id @default(autoincrement())
+  session       Session    @relation(fields: [session_id], references: [id])
+  session_id    Int
+  member    Member @relation(fields: [member_id], references: [id])
+  member_id Int
+
+  // alternative fields+relation to above | w/c is better?
+  // member    Member @relation(fields: [user_id, group_id], references: [user_id, group_id])
+  // group_id Int
+  // user_id Int
+
+  // date DateTime @default(dbgenerated("CURDATE()")) @db.Date()
+  // time DateTime @default(dbgenerated("CURTIME()")) @db.Time()
+  datetimestamp DateTime @default(now())
+  //  why doesnt this work?
+  // date          DateTime @default(now()) @db.Date()
+  date          DateTime @db.Date()
+
+  // use mysql functions to automatically write to the DB the year, day, month, time values of the DateTime obj so that we don't have to use JS to get these details individually, later on
+
+  @@unique(fields: [session_id, member_id, date])
+  // need to index user and group ids individually?
+  @@index(fields: [session_id]) // still needed?
+  @@index(fields: [member_id])
+  // @@index(fields: [user_id]) // still needed?
+  // @@index(fields: [user_id, group_id]) // still needed?
+  // @@index(fields: [date]) // needed for faster queries when searching checkins per day?
+  @@index(fields: [date]) // needed for faster queries when searching checkins per day?
+}
+
+// add Holidays/Day-offs/CancelledSessions Model
