@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 import styles from './Navbar.module.css';
-import UserAvatar from './Shared/UserAvatar';
+import UserAvatar from './UserAvatar';
 
 export default function Navbar() {
   const currentUrl = usePathname();

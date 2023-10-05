@@ -1,7 +1,7 @@
 import Image from 'next/image';
 
 import styles from './Footer.module.css';
-import UserAvatar from './Shared/UserAvatar';
+import UserAvatar from './UserAvatar';
 
 export default function Footer() {
   return (

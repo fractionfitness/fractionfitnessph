@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 // import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
-import Card from './Shared/Card';
-import Input from './Shared/Input';
-import Button from './Shared/Button';
+import Card from './ui/Card';
+import Input from './ui/Input';
+import Button from './ui/Button';
 import { register } from '@/lib/apiCalls';
 
 const registerContent = {
