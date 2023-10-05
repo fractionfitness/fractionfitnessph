@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={cn(
-          'flex min-h-screen flex-col min-w-fit bg-zinc-900',
+          'flex min-h-screen flex-col min-w-fit dark bg-background',
           inter.className,
         )}
       >
@@ -30,7 +30,7 @@ export default function RootLayout({
           <Header />
           <main
             className={cn(
-              'flex-grow text-center container max-w-7xl mx-auto text-zinc-100',
+              'flex-grow text-center container max-w-7xl mx-auto text-foreground',
             )}
           >
             {children}

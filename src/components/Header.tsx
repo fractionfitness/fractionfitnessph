@@ -16,7 +16,7 @@ export default function Header() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-stone-700 bg-stone-900">
+    <header className="sticky top-0 z-40 border-b bg-background">
       <nav className={styles.nav}>
         <Link href={'/'} className="items-center flex mx-4 space-x-2">
           {/* <Image src="/ffph-logo.jpg" width={45} height={45} alt="FFPH Logo" /> */}
@@ -26,24 +26,24 @@ export default function Header() {
             className="rounded-md"
             fallbackIcon={<Icons.logoPlaceholder className="h-10 w-10" />}
           />
-          <span className="inline-block font-semibold text-lg text-stone-100">
+          <span className="inline-block font-semibold text-lg text-foreground">
             Fraction Fitness PH
           </span>
         </Link>
-        <ul className={cn(styles.links, 'text-stone-400')}>
+        <ul className={cn(styles.links, 'text-muted-foreground')}>
           {/* ----------------delete this after------------------- */}
-          <li>
+          <li className={cn(styles.links, 'hover:text-foreground')}>
             <Link href={'/dashboard/user'}>UserDashboard</Link>
           </li>
           {/* ----------------delete this after------------------- */}
           {!session && (
             <>
-              <li>
+              <li className={cn(styles.links, 'hover:text-foreground')}>
                 <Link href={`/api/auth/signin?callbackUrl=${currentUrl}`}>
                   Sign in
                 </Link>
               </li>
-              <li>
+              <li className={cn(styles.links, 'hover:text-foreground')}>
                 <Link href={'/register'}>Register</Link>
               </li>
             </>

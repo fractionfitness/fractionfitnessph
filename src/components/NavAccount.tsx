@@ -36,7 +36,7 @@ const NavAccount: FC = ({ user }) => {
           fallbackIcon={<Icons.user className="h-10 w-10" />}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-stone-900 text-stone-300" align="end">
+      <DropdownMenuContent align="end">
         <div className="flex items-center justify-start gap-2 p-2 ">
           <div className="flex flex-col space-y-1 leading-none">
             {user.profile?.first_name && (
