@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    appDir: true,
-    // add deps herer that server components use
+    // appDir is no longer experimental and is already available by default
+    // appDir: true,
+    // add deps here that server components use
     serverComponentsExternalPackages: ['bcrypt', '@prisma/client'],
   },
   eslint: {
