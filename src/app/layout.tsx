@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={cn(
-          'flex min-h-screen flex-col min-w-fit bg-gray-900',
+          'flex min-h-screen flex-col min-w-fit bg-zinc-900',
           inter.className,
         )}
       >

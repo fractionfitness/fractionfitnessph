@@ -6,15 +6,17 @@ import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 import styles from './Header.module.css';
+import { cn } from '@/lib/utils';
 import LogoAvatar from './LogoAvatar';
 import { Icons } from '@/components/Icons';
+import NavAccount from './NavAccount';
 
 export default function Header() {
   const currentUrl = usePathname();
   const { data: session, status } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-700 bg-slate-900 text-slate-300">
+    <header className="sticky top-0 z-40 border-b border-stone-700 bg-stone-900">
       <nav className={styles.nav}>
         <Link href={'/'} className="items-center flex mx-4 space-x-2">
           {/* <Image src="/ffph-logo.jpg" width={45} height={45} alt="FFPH Logo" /> */}
@@ -24,11 +26,11 @@ export default function Header() {
             className="rounded-md"
             fallbackIcon={<Icons.logoPlaceholder className="h-10 w-10" />}
           />
-          <span className="inline-block font-semibold text-lg">
+          <span className="inline-block font-semibold text-lg text-stone-100">
             Fraction Fitness PH
           </span>
         </Link>
-        <ul className={styles.links}>
+        <ul className={cn(styles.links, 'text-stone-400')}>
           {/* ----------------delete this after------------------- */}
           <li>
             <Link href={'/dashboard/user'}>UserDashboard</Link>
@@ -49,16 +51,17 @@ export default function Header() {
           {session && (
             <>
               <li>
-                <LogoAvatar
+                {/* <LogoAvatar
                   src="https://github.com/shadcn.png"
                   alt="@shadcn"
                   className="h-10 w-10"
                   fallbackIcon={<Icons.user className="h-10 w-10" />}
-                />
+                /> */}
+                <NavAccount user={session.user} />
               </li>
-              <li>
+              {/* <li>
                 <Link href={'/api/auth/signout?callbackUrl=/'}>Sign out</Link>
-              </li>
+              </li> */}
             </>
           )}
         </ul>
