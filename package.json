@@ -9,7 +9,7 @@
     "seed:generate": "ts-node -P tsconfig-seed.json -r tsconfig-paths/register --transpileOnly prisma/seedInputs.ts",
     "db": "docker compose up -d",
     "db:down": "docker compose down",
-    "db:reset": "prisma db push && prisma db seed",
+    "db:reset": "prisma generate && prisma db push && prisma db seed",
     "lint": "next lint",
     "format": "prettier '**/*.{js,jsx,cjs,ts,tsx,css,scss,sass,md}' --cache --write",
     "prepare": "husky install",
