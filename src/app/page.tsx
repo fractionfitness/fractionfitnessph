@@ -5,7 +5,7 @@ export default function Home() {
   //   arr.push(i + 1);
   // }
   return (
-    <div className="text-gray-100">
+    <div>
       <p>User&apos;s Wall</p>
       {/* tests that scroll will not place Header out of view */}
       {/* {arr.map((item, index) => (

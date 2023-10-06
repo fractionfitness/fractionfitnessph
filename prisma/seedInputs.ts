@@ -4,7 +4,10 @@ import { faker } from '@faker-js/faker';
 // import { hashSync } from 'bcrypt';
 import { hash } from 'bcrypt';
 
-import { generateRandomDateTimeString } from './seedUtils';
+import {
+  generateRandomDateTimeObj,
+  convertToMysqlDatetimeString,
+} from './seedUtils';
 
 const p = path.join(
   path.dirname(require.main.filename),
@@ -99,83 +102,83 @@ const sessionData = {
     {
       name: 'Adults Morning',
       days: [mon, tue, thu],
-      start_at: '1970-01-01T09:30:00.000Z',
-      end_at: '1970-01-01T11:00:00.000Z',
+      start_at: '1970-01-01T09:30:00+08:00',
+      end_at: '1970-01-01T11:00:00+08:00',
     },
     // using Minors instead of Kids and Teens for simplicity (Minors is applicable to both)
     {
       name: 'Adults & Minors Lvl 3 Weekday Afternoon',
       days: [mon, wed],
-      start_at: '1970-01-01T17:30:00.000Z',
-      end_at: '1970-01-01T18:30:00.000Z',
+      start_at: '1970-01-01T17:30:00+08:00',
+      end_at: '1970-01-01T18:30:00+08:00',
     },
     {
       name: 'Adults & Minors Lvl 3 Weekday Afternoon - No Gi',
       days: [fri],
-      start_at: '1970-01-01T17:30:00.000Z',
-      end_at: '1970-01-01T18:30:00.000Z',
+      start_at: '1970-01-01T17:30:00+08:00',
+      end_at: '1970-01-01T18:30:00+08:00',
     },
     {
       name: 'Adults Evening',
       days: [mon, tue, wed],
-      start_at: '1970-01-01T19:30:00.000Z',
-      end_at: '1970-01-01T21:30:00.000Z',
+      start_at: '1970-01-01T19:30:00+08:00',
+      end_at: '1970-01-01T21:30:00+08:00',
     },
     // group owner's choide whether to separate gi and no gi into different sessions
     {
       name: 'Adults Evening - No Gi',
       days: [thu],
-      start_at: '1970-01-01T19:30:00.000Z',
-      end_at: '1970-01-01T21:30:00.000Z',
+      start_at: '1970-01-01T19:30:00+08:00',
+      end_at: '1970-01-01T21:30:00+08:00',
     },
     {
       name: 'Adults & Minors Lvl 3 Evening',
       days: [fri],
-      start_at: '1970-01-01T19:30:00.000Z',
-      end_at: '1970-01-01T21:30:00.000Z',
+      start_at: '1970-01-01T19:30:00+08:00',
+      end_at: '1970-01-01T21:30:00+08:00',
     },
     {
       name: 'Adults Sat',
       days: [sat],
-      start_at: '1970-01-01T14:30:00.000Z',
-      end_at: '1970-01-01T16:30:00.000Z',
+      start_at: '1970-01-01T14:30:00+08:00',
+      end_at: '1970-01-01T16:30:00+08:00',
     },
     {
       name: 'Adults & Minors Level 1 & 2 Sun',
       days: [sun],
-      start_at: '1970-01-01T16:30:00.000Z',
-      end_at: '1970-01-01T18:00:00.000Z',
+      start_at: '1970-01-01T16:30:00+08:00',
+      end_at: '1970-01-01T18:00:00+08:00',
     },
     // either more general or more granular sessions but best to only have one unique group+session time period  to avoid confusion for members and employees, when checking in
     {
       name: 'Minors Lvl 1 Fri',
       days: [fri],
-      start_at: '1970-01-01T16:30:00.000Z',
-      end_at: '1970-01-01T17:30:00.000Z',
+      start_at: '1970-01-01T16:30:00+08:00',
+      end_at: '1970-01-01T17:30:00+08:00',
     },
     {
       name: 'Minors Lvl 1 Sat',
       days: [sat],
-      start_at: '1970-01-01T13:00:00.000Z',
-      end_at: '1970-01-01T14:30:00.000Z',
+      start_at: '1970-01-01T13:00:00+08:00',
+      end_at: '1970-01-01T14:30:00+08:00',
     },
     {
       name: 'Minors Lvl 3 Weekday',
       days: [mon, wed],
-      start_at: '1970-01-01T17:30:00.000Z',
-      end_at: '1970-01-01T18:30:00.000Z',
+      start_at: '1970-01-01T17:30:00+08:00',
+      end_at: '1970-01-01T18:30:00+08:00',
     },
     {
       name: 'Minors Lvl 2 & 3 Weekday - No Gi',
       days: [fri],
-      start_at: '1970-01-01T17:30:00.000Z',
-      end_at: '1970-01-01T18:30:00.000Z',
+      start_at: '1970-01-01T17:30:00+08:00',
+      end_at: '1970-01-01T18:30:00+08:00',
     },
     {
       name: 'Minors Lvl 2 & 3 Sat',
       days: [sat],
-      start_at: '1970-01-01T14:30:00.000Z',
-      end_at: '1970-01-01T16:30:00.000Z',
+      start_at: '1970-01-01T14:30:00+08:00',
+      end_at: '1970-01-01T16:30:00+08:00',
     },
     // even though teens lvl 2 & 3 sessions end at different times
     // (16:00 & 16:30, respectively), we don't monitor checkouts so it wont
@@ -184,8 +187,8 @@ const sessionData = {
     // {
     //   name: 'Minors Lvl 3 Sat',
     //   days: [sat],
-    //   start_at: '1970-01-01T14:30:00.000Z',
-    //   end_at: '1970-01-01T16:30:00.000Z',
+    //   start_at: '1970-01-01T14:30:00+08:00',
+    //   end_at: '1970-01-01T16:30:00+08:00',
     // },
   ],
 };
@@ -391,7 +394,7 @@ async function generateFakeModelDataArrays() {
   });
   idCount = 1;
 
-  let checkins = [];
+  let memberCheckins = [];
   members.map((member) => {
     // get all of the current member's group sessions
     const availableSessionsForMember = sessions.filter(
@@ -404,21 +407,20 @@ async function generateFakeModelDataArrays() {
       const numberOfCheckins = faker.helpers.rangeToNumber({ min: 0, max: 10 });
 
       for (let i = 0; i < numberOfCheckins; i++) {
-        // won't matter if selectedSessionId repeats since: (1) prisma will ensure duplicate records are not written to the db , and (2) datetimestamp should always be different every loop since a checkin could be the same session but different datetimestamp
+        // won't matter if selectedSessionId repeats since: (1) prisma will ensure duplicate records are not written to the db , and (2) datetimestamp should always be different every loop since a memberCheckin could be the same session but different datetimestamp
         const selectedSession = faker.helpers.arrayElement(
           availableSessionsForMember,
         );
 
-        const checkinRecord = {
+        const memberCheckinRecord = {
           id: idCount++,
           session_id: selectedSession.id,
           member_id: member.id,
           // datetimestamp should be a random Date that must be the same day as the session, and checkin time is in between the session's start_at and end_at values
-          datetimestamp: new Date(generateRandomDateTimeString()),
-          date: new Date(generateRandomDateTimeString().slice(0, 10)),
+          datetime: generateRandomDateTimeObj(),
         };
 
-        checkins.push(checkinRecord);
+        memberCheckins.push(memberCheckinRecord);
       }
     }
   });
@@ -431,7 +433,7 @@ async function generateFakeModelDataArrays() {
     groupRelations,
     employees,
     members,
-    checkins,
+    memberCheckins,
   };
 }
 
