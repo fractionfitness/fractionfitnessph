@@ -73,16 +73,16 @@ model UserProfile {
 
 // GroupProfile 1?:1 Employees m?:1 Members m?:1 User 1:m?
 model Group {
-  id          Int             @id @default(autoincrement())
-  name        String          @unique
-  profile     GroupProfile?
+  id        Int             @id @default(autoincrement())
+  name      String          @unique
+  profile   GroupProfile?
   employees Employee[]
-  members Member[]
-  parents     GroupRelation[] @relation(name: "child")
-  children    GroupRelation[] @relation(name: "parent")
-  sessions    Session[]
-  owner       User            @relation(fields: [owner_id], references: [id])
-  owner_id    Int
+  members   Member[]
+  parents   GroupRelation[] @relation(name: "child")
+  children  GroupRelation[] @relation(name: "parent")
+  sessions  Session[]
+  owner     User            @relation(fields: [owner_id], references: [id])
+  owner_id  Int
 
   @@index([owner_id])
 }
@@ -115,13 +115,13 @@ model Employee {
 // User 1:m Group 1:m
 model Member {
   // better to make Member pk (id) a composite of user_id and group_id, in the same manner as Employees?
-  id       Int        @id @default(autoincrement())
-  user     User       @relation(fields: [user_id], references: [id])
+  id       Int             @id @default(autoincrement())
+  user     User            @relation(fields: [user_id], references: [id])
   user_id  Int
-  group    Group      @relation(fields: [group_id], references: [id])
+  group    Group           @relation(fields: [group_id], references: [id])
   group_id Int
   checkins MemberCheckin[]
-  role     MemberRole @default(MEMBER)
+  role     MemberRole      @default(MEMBER)
 
   // @@id(fields: [user_id, group_id])
   @@unique(fields: [user_id, group_id])
@@ -147,15 +147,15 @@ model GroupRelation {
 
 // Group 1:m
 model Session {
-  id       Int       @id @default(autoincrement())
-  group    Group     @relation(fields: [group_id], references: [id])
-  group_id Int
+  id              Int             @id @default(autoincrement())
+  group           Group           @relation(fields: [group_id], references: [id])
+  group_id        Int
   member_checkins MemberCheckin[]
-  name     String
-  start_at DateTime   // can't use @db.Time(0) since there is a bug that gives the wrong tz offset (off by 30minutes: -450 instead of -480 for +08:00 timezones) when 1970-01-01 is used as the date (default date for @db.Time(0))
-  end_at   DateTime
-  day      Day
-  status   String    @default("active") // other statuses are inactive, cancelled/deleted/discontinued
+  name            String
+  start_at        DateTime // can't use @db.Time(0) since there is a bug that gives the wrong tz offset (off by 30minutes: -450 instead of -480 for +08:00 timezones) when 1970-01-01 is used as the date (default date for @db.Time(0))
+  end_at          DateTime
+  day             Day
+  status          String          @default("active") // other statuses are inactive, cancelled/deleted/discontinued
 
   // @@id(fields: [group_id, name, day])
   @@unique(fields: [group_id, name, day])
@@ -168,11 +168,11 @@ model Session {
 
 // Session 1:m Members 1:m
 model MemberCheckin {
-  id            Int        @id @default(autoincrement())
-  session       Session    @relation(fields: [session_id], references: [id])
-  session_id    Int
-  member    Member @relation(fields: [member_id], references: [id])
-  member_id Int
+  id         Int     @id @default(autoincrement())
+  session    Session @relation(fields: [session_id], references: [id])
+  session_id Int
+  member     Member  @relation(fields: [member_id], references: [id])
+  member_id  Int
 
   // alternative fields+relation to above | w/c is better?
   // member    Member @relation(fields: [user_id, group_id], references: [user_id, group_id])
@@ -188,7 +188,6 @@ model MemberCheckin {
   // time DateTime @default(dbgenerated("CURTIME()")) @db.Time()
 
   @@unique(fields: [session_id, member_id, datetime])
-
   // need to index member and group ids individually?
   @@index(fields: [session_id]) // still needed?
   @@index(fields: [member_id])
