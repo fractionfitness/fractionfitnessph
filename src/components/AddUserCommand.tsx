@@ -137,7 +137,7 @@ export default function AddUserCommand({ mode }) {
       // to remove typescript error, ensure addMembersToGroupAction function doesn't return any value
     }
     if (mode === 'employee') {
-      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
+      startTransition(() => addEmployeesToGroupAction(selectedUsers, groupId));
     }
   };
 
@@ -218,19 +218,24 @@ export default function AddUserCommand({ mode }) {
               <CommandGroup className="capitalize" heading="Selected Users">
                 {hasSelectedUsers &&
                   selectedUsers.map((user) => (
-                    <CommandItem key={user.email}>
+                    <div key={user.email} className="flex">
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="ml-2"
+                        size="xs"
+                        className="hover:bg-destructive hover:text-destructive-foreground my-auto"
                         onClick={() => {
                           handleRemoveUser(user);
                         }}
                       >
-                        <Icons.close aria-hidden="true" />
+                        <Icons.close
+                          aria-hidden="true"
+                          // className="hover:bg-destructive hover:text-destructive-foreground"
+                        />
                       </Button>
-                      {user.full_name}
-                    </CommandItem>
+                      <CommandItem className="aria-selected:bg-background">
+                        {user.full_name}
+                      </CommandItem>
+                    </div>
                   ))}
               </CommandGroup>
               <CommandSeparator
