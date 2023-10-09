@@ -1,5 +1,7 @@
 import {
   LucideProps,
+  Loader,
+  MoreVertical,
   Plus,
   Search,
   SquareSlash,
@@ -9,6 +11,8 @@ import {
 
 export const Icons = {
   logoPlaceholder: SquareSlash,
+  loader: Loader,
+  optionsVertical: MoreVertical,
   plus: Plus,
   user: UserCircle,
   search: Search,
