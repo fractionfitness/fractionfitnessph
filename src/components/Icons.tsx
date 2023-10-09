@@ -1,4 +1,6 @@
 import {
+  ArrowUpDown,
+  ChevronDown,
   LucideProps,
   Loader,
   MoreVertical,
@@ -10,6 +12,8 @@ import {
 } from 'lucide-react';
 
 export const Icons = {
+  arrowUpDown: ArrowUpDown,
+  chevronDown: ChevronDown,
   logoPlaceholder: SquareSlash,
   loader: Loader,
   optionsVertical: MoreVertical,
