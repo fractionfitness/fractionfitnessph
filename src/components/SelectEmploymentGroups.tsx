@@ -29,12 +29,16 @@ export default function SelectEmploymentGroups({ employmentGroups }) {
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Choose a group" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-secondary">
         <SelectGroup>
           <SelectLabel>Your Groups</SelectLabel>
           {/* try using value={group.id} */}
           {employmentGroups.map((group) => (
-            <SelectItem key={group.id} value={group.name}>
+            <SelectItem
+              className="focus:bg-background cursor-pointer"
+              key={group.id}
+              value={group.name}
+            >
               {group.name}
             </SelectItem>
           ))}

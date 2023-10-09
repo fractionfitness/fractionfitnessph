@@ -65,7 +65,7 @@ function RemoveAlertDialog({ handleRemoveUser }) {
       <AlertDialogTrigger asChild>
         <Button
           variant="outline"
-          className="hover:bg-red-700 hover:text-gray-50 p-1 border-2 border-red-600 text-red-700"
+          className="hover:bg-destructive hover:text-foreground p-1 border-2 border-destructive text-destructive"
         >
           REMOVE
         </Button>
@@ -184,7 +184,7 @@ export default function GroupUserOptions({
           // variant="secondary"
           variant="ghost"
           // onClick={(e) => console.log('button clicked')}
-          className="hover:bg-gray-700 hover:text-gray-50 p-1"
+          className="hover:bg-accent p-1"
           ref={popoverBtnRef}
           disabled={!popoverBtnStatus}
         >
@@ -195,7 +195,7 @@ export default function GroupUserOptions({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-80 bg-secondary">
         <div className="grid gap-4">
           <div className="space-y-2">
             <h4 className="font-medium leading-none capitalize text-center">{`Group ${userType} Options`}</h4>

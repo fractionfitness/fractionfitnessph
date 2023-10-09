@@ -151,7 +151,6 @@ export default function AddUserCommand({ mode }) {
         // variant="secondary"
         variant="default"
         onClick={() => setIsOpen(true)}
-        className="hover:bg-gray-800 hover:text-gray-50 border-gray-700 border p-2"
         disabled={isPending}
       >
         {!isPending ? (
@@ -211,10 +210,7 @@ export default function AddUserCommand({ mode }) {
           )}
           {hasSelectedUsers && (
             <>
-              <CommandSeparator
-                className="bg-gray-500 border-t"
-                alwaysRender={true}
-              />
+              <CommandSeparator alwaysRender={true} />
               <CommandGroup className="capitalize" heading="Selected Users">
                 {hasSelectedUsers &&
                   selectedUsers.map((user) => (
@@ -238,10 +234,7 @@ export default function AddUserCommand({ mode }) {
                     </div>
                   ))}
               </CommandGroup>
-              <CommandSeparator
-                className="bg-gray-500 border-t"
-                alwaysRender={true}
-              />
+              <CommandSeparator alwaysRender={true} />
               <Button
                 variant="default"
                 onClick={() =>
