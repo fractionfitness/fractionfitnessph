@@ -1,8 +1,26 @@
-import { LucideProps, UserCircle, SquareSlash } from 'lucide-react';
+import {
+  ArrowUpDown,
+  ChevronDown,
+  LucideProps,
+  Loader,
+  MoreVertical,
+  Plus,
+  Search,
+  SquareSlash,
+  UserCircle,
+  X,
+} from 'lucide-react';
 
 export const Icons = {
-  user: UserCircle,
+  arrowUpDown: ArrowUpDown,
+  chevronDown: ChevronDown,
   logoPlaceholder: SquareSlash,
+  loader: Loader,
+  optionsVertical: MoreVertical,
+  plus: Plus,
+  user: UserCircle,
+  search: Search,
+  close: X,
   facebook: (props: LucideProps) => (
     <svg
       {...props}

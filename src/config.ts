@@ -8,3 +8,30 @@ export const DAY_NAMES = [
   'friday',
   'saturday',
 ];
+export const memberContent = {
+  userType: 'Member',
+  groupType: 'Membership',
+  userRoles: ['COACH', 'MEMBER', 'VISITOR'],
+  userStatus: [
+    'ACTIVE',
+    'INACTIVE',
+    'BANNED',
+    // 'SABBATICAL',
+    // 'INJURED',
+    // 'PAST DUE',
+  ],
+};
+export const employeeContent = {
+  userType: 'Employee',
+  groupType: 'Employment',
+  userRoles: ['OWNER', 'ADMIN', 'STAFF', 'VOLUNTEER'],
+  userStatus: [
+    'ACTIVE',
+    'RESIGNED',
+    'TERMINATED',
+    // 'PROBATIONARY',
+    // 'LOA',
+    // 'AWOL',
+    // 'END-OF-VOLUNTEER SERVICE',
+  ],
+};
