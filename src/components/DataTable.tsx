@@ -110,7 +110,6 @@ export function DataTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn('group')?.setFilterValue(event.target.value)
           }
-          className="max-w-sm bg-zinc-900 text-gray-50"
         /> */}
       </div>
       <div className="rounded-md border">

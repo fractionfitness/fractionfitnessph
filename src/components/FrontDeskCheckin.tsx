@@ -207,7 +207,7 @@ function SearchSelectOneUserCommand({
   };
 
   return (
-    <Command shouldFilter={false}>
+    <Command shouldFilter={false} className="border">
       <div className={cn('grid grid-cols-8')}>
         <div className={cn('col-span-7')}>
           <CommandInput
@@ -220,6 +220,7 @@ function SearchSelectOneUserCommand({
         <div className={cn('col-span-1 border-b flex')}>
           <Button
             variant="ghost"
+            size="xs"
             onClick={(e) => {
               setCommandOpen((s) => !s);
             }}
@@ -228,7 +229,7 @@ function SearchSelectOneUserCommand({
             // disabled={inputValue.trim().length === 0}
             disabled={!hasValidQuery}
             className={cn(
-              ' hover:bg-gray-700 bg-gray-900 disabled:bg-zinc-400',
+              'hover:bg-accent border disabled:bg-background disabled:border-background',
               'h-8 w-8 rounded-md px-2 py-1',
               'm-auto',
             )}
@@ -343,7 +344,7 @@ function CheckinCard({ mode, sessions }) {
   };
 
   return (
-    <Card className="w-[400px] bg-zinc-900 text-zinc-50 ">
+    <Card className="w-[400px] bg-background text-foreground ">
       <CardHeader>
         <CardTitle>{`${userType}`} Check-in</CardTitle>
         <CardDescription>Card description...</CardDescription>
@@ -362,7 +363,7 @@ function CheckinCard({ mode, sessions }) {
           <Label htmlFor="name" className="text-left">
             {`${userType} PIN`}
           </Label>
-          <div className="flex flex-row bg-zinc-900 border border-zinc-200">
+          <div className="flex flex-row bg-secondary">
             {/* <div className="m-auto">
             <Icons.key className="" />
           </div> */}
@@ -374,10 +375,9 @@ function CheckinCard({ mode, sessions }) {
               type="number"
               // type="string"
               className={cn(
-                'max-w-sm bg-zinc-900 text-gray-50',
-                'border-none',
+                'max-w-sm ',
                 !pinInputState &&
-                  'invalid:border-pink-700 invalid:text-pink-700 focus:invalid:border-pink-700 focus:invalid:ring-pink-700',
+                  'invalid:border-error invalid:text-error focus:invalid:border-error focus:invalid:ring-error',
                 // using arbitrary css properties for unavailable tailwind props
                 // '[-moz-appearance:textfield]',
                 // extending tailwind utils using tailwind plugins
@@ -434,7 +434,9 @@ function CheckinCard({ mode, sessions }) {
         </div>
 
         {!pinInputState && (
-          <p className="text-pink-700">Please enter a valid PIN.</p>
+          <p className="text-error">
+            Please enter a valid PIN. Only numbers are allowed.
+          </p>
         )}
         <Button
           // onClick={(e) =>
@@ -447,7 +449,7 @@ function CheckinCard({ mode, sessions }) {
           onClick={handleSubmit}
           size="lg"
           // disabled={!selectedSession || !selectedUser || !pinInputState}
-          className={cn('border border-gray-700 hover:bg-gray-500', 'w-full')}
+          className="w-full"
         >
           {!isPending ? (
             <Icons.clock className="h-4 w-4 mr-2" aria-hidden="true" />

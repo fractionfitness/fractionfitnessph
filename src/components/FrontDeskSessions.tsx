@@ -111,12 +111,16 @@ function SessionsStatusCategory({ sessions, header }) {
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="hover:bg-zinc-700 hover:text-zinc-50 bg-zinc-900 text-zinc-50 p-2 w-80"
+            // className="hover:bg-zinc-700 hover:text-zinc-50 bg-zinc-900 text-zinc-50 p-2 w-80"
+            className="p-2 w-96"
           >
             {header}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="text-gray-50 bg-zinc-900 w-80">
+        <PopoverContent
+          // className="text-gray-50 bg-zinc-900 w-80"
+          className="w-96 bg-secondary"
+        >
           {sessions && sessions.length > 0 ? (
             sessions.map((session) => {
               return <SessionItem key={session.id} session={session} />;
@@ -147,7 +151,7 @@ function SessionCard({
   time,
 }) {
   return (
-    <Tabs defaultValue="status" className="w-[420px]">
+    <Tabs defaultValue="status" className="w-[435px]">
       {/* CLOCK */}
       {time && (
         <div className="text-5xl">
@@ -158,22 +162,22 @@ function SessionCard({
           </span>
         </div>
       )}
-      <TabsList className="grid w-full grid-cols-2 bg-gray-900 text-gray-50 border border-gray-700">
+      <TabsList className="grid w-full grid-cols-2 bg-background text-foreground border">
         <TabsTrigger
           value="status"
-          className="data-[state=active]:bg-gray-400 data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
+          className="data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-sm"
         >
           Status
         </TabsTrigger>
         <TabsTrigger
           value="allSessions"
-          className="data-[state=active]:bg-gray-400 data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
+          className="data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-sm"
         >
           All Sessions
         </TabsTrigger>
       </TabsList>
       <TabsContent value="status">
-        <Card className=" bg-zinc-900 text-zinc-50">
+        <Card className=" bg-background text-secondary-foreground">
           <CardHeader>
             <CardTitle>Status</CardTitle>
             <CardDescription>
@@ -194,7 +198,7 @@ function SessionCard({
         </Card>
       </TabsContent>
       <TabsContent value="allSessions">
-        <Card className=" bg-zinc-900 text-zinc-50">
+        <Card className=" bg-background text-secondary-foreground">
           <CardHeader>
             <CardTitle>Today&apos;s Sessions</CardTitle>
             <CardDescription>Everything...</CardDescription>
