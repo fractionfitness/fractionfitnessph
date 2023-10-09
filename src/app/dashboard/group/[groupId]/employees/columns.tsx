@@ -118,7 +118,7 @@ export const columns: ColumnDef<Employee>[] = [
 
       return (
         <GroupUserOptions
-          mode="member"
+          mode="employee"
           groupUser={row.original}
           roles={Object.keys(EmployeeRole)}
           statuses={

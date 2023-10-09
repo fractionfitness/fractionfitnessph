@@ -29,6 +29,7 @@ import { Icons } from '@/components/Icons';
 import { memberContent, employeeContent } from '@/config';
 
 function SelectOptions({
+  id,
   items,
   placeholder,
   defaultValue,
@@ -38,28 +39,30 @@ function SelectOptions({
   // const selectRef = useRef(null);
 
   return (
-    <Select onValueChange={handleSelectChange} defaultValue={defaultValue}>
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {/* <SelectLabel>Your Groups</SelectLabel> */}
-          {items.map((item) => {
-            return (
-              <SelectItem key={item} value={item} className="cursor-pointer">
-                {/* need to manipulate string so that capitalization will be consistent with SelectItem value prop */}
-                {item.charAt(0) + item.slice(1, item.length).toLowerCase()}
-              </SelectItem>
-            );
-          })}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    <div id={id}>
+      <Select onValueChange={handleSelectChange} defaultValue={defaultValue}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {/* <SelectLabel>Your Groups</SelectLabel> */}
+            {items.map((item) => {
+              return (
+                <SelectItem key={item} value={item} className="cursor-pointer">
+                  {/* need to manipulate string so that capitalization will be consistent with SelectItem value prop */}
+                  {item.charAt(0) + item.slice(1, item.length).toLowerCase()}
+                </SelectItem>
+              );
+            })}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
-function RemoveAlertDialog({ handleRemoveUser }) {
+function RemoveAlertDialog({ handleRemoveUser, userType }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -67,7 +70,7 @@ function RemoveAlertDialog({ handleRemoveUser }) {
           variant="outline"
           className="hover:bg-destructive hover:text-foreground p-1 border-2 border-destructive text-destructive"
         >
-          REMOVE
+          {`REMOVE ${userType.toUpperCase()}`}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -79,9 +82,9 @@ function RemoveAlertDialog({ handleRemoveUser }) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel variant="default">Cancel</AlertDialogCancel>
+          <AlertDialogCancel variant="default">CANCEL</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={handleRemoveUser}>
-            REMOVE
+            {`REMOVE ${userType.toUpperCase()}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -198,7 +201,7 @@ export default function GroupUserOptions({
       <PopoverContent className="w-80 bg-secondary">
         <div className="grid gap-4">
           <div className="space-y-2">
-            <h4 className="font-medium leading-none capitalize text-center">{`Group ${userType} Options`}</h4>
+            <h4 className="font-medium leading-none capitalize text-center">{`Group ${userType} Details`}</h4>
             <hr />
             <p className="text-sm text-muted-foreground text-center">
               {`Edit group ${userType.toLowerCase()} details`}
@@ -206,8 +209,9 @@ export default function GroupUserOptions({
           </div>
           <div className="grid gap-2">
             <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="width">Edit Role</Label>
+              <Label htmlFor="role">Edit Role</Label>
               <SelectOptions
+                id="role"
                 items={roles}
                 placeholder={`${userType} Roles`}
                 defaultValue={groupUser.role}
@@ -215,8 +219,9 @@ export default function GroupUserOptions({
               />
             </div>
             <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="width">Edit Status</Label>
+              <Label htmlFor="status">Edit Status</Label>
               <SelectOptions
+                id="status"
                 items={statuses}
                 placeholder={`${userType} Status`}
                 // remove ?? DEFAULT_USER_STATUS after adding status field to Employee/Member model
@@ -231,7 +236,7 @@ export default function GroupUserOptions({
               // className="hover:bg-gray-700 hover:text-gray-50 p-1"
             >
               {/* {`Edit Group ${userType} Details`} */}
-              EDIT
+              SAVE CHANGES
             </Button>
           </div>
 
@@ -239,7 +244,10 @@ export default function GroupUserOptions({
           <p className="text-sm text-muted-foreground text-center">
             {`Remove group ${userType.toLowerCase()}`}
           </p>
-          <RemoveAlertDialog handleRemoveUser={handleRemoveUser} />
+          <RemoveAlertDialog
+            handleRemoveUser={handleRemoveUser}
+            userType={userType}
+          />
         </div>
       </PopoverContent>
     </Popover>
