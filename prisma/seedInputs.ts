@@ -4,10 +4,7 @@ import { faker } from '@faker-js/faker';
 // import { hashSync } from 'bcrypt';
 import { hash } from 'bcrypt';
 
-import {
-  generateRandomDateTimeObj,
-  convertToMysqlDatetimeString,
-} from './seedUtils';
+import { generateRandomDateTimeObj } from './seedUtils';
 
 const p = path.join(
   path.dirname(require.main.filename),
@@ -21,6 +18,12 @@ const p = path.join(
 async function hashPassword(password) {
   return await hash(password, 12);
 }
+
+// generate hashed password given input
+// async function exec() {
+//   console.log(await hashPassword('pwordly'));
+// }
+// exec();
 
 /* TODOS: ////////////////////////////////////////////////////////////////////
 

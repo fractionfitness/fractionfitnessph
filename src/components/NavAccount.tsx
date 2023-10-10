@@ -36,7 +36,7 @@ const NavAccount: FC = ({ user }) => {
           fallbackIcon={<Icons.user className="h-10 w-10" />}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="bg-secondary">
         <div className="flex items-center justify-start gap-2 p-2 ">
           <div className="flex flex-col space-y-1 leading-none">
             {user.profile?.first_name && (
@@ -48,7 +48,7 @@ const NavAccount: FC = ({ user }) => {
           </div>
         </div>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-background" />
 
         <DropdownMenuItem asChild>
           <Link href="/r/create">Create community</Link>
@@ -57,7 +57,7 @@ const NavAccount: FC = ({ user }) => {
           <Link href="/settings">Settings</Link>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-background" />
 
         <DropdownMenuItem
           className="cursor-pointer"

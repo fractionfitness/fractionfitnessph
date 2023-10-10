@@ -5,11 +5,9 @@ import { useParams } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/use-debounce';
-import {
-  searchUsersAction,
-  addMembersToGroupAction,
-  addEmployeesToGroupAction,
-} from '@/actions/user';
+import { searchUsersAction } from '@/actions/user';
+import { addUsersToGroupMembershipAction } from '@/actions/member';
+import { addUsersToGroupEmploymentAction } from '@/actions/employee';
 
 import {
   CommandDialog,
@@ -133,11 +131,15 @@ export default function AddUserCommand({ mode }) {
   const handleAddButtonClick = (selectedUsers, groupId) => {
     setIsOpen(false);
     if (mode === 'member') {
-      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
-      // to remove typescript error, ensure addMembersToGroupAction function doesn't return any value
+      startTransition(() =>
+        addUsersToGroupMembershipAction(selectedUsers, groupId),
+      );
+      // to remove typescript error, ensure addUsersToGroupMembershipAction function doesn't return any value
     }
     if (mode === 'employee') {
-      startTransition(() => addMembersToGroupAction(selectedUsers, groupId));
+      startTransition(() =>
+        addUsersToGroupEmploymentAction(selectedUsers, groupId),
+      );
     }
   };
 
@@ -151,7 +153,6 @@ export default function AddUserCommand({ mode }) {
         // variant="secondary"
         variant="default"
         onClick={() => setIsOpen(true)}
-        className="hover:bg-gray-800 hover:text-gray-50 border-gray-700 border p-2"
         disabled={isPending}
       >
         {!isPending ? (
@@ -211,32 +212,31 @@ export default function AddUserCommand({ mode }) {
           )}
           {hasSelectedUsers && (
             <>
-              <CommandSeparator
-                className="bg-gray-500 border-t"
-                alwaysRender={true}
-              />
+              <CommandSeparator alwaysRender={true} />
               <CommandGroup className="capitalize" heading="Selected Users">
                 {hasSelectedUsers &&
                   selectedUsers.map((user) => (
-                    <CommandItem key={user.email}>
+                    <div key={user.email} className="flex">
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="ml-2"
+                        size="xs"
+                        className="hover:bg-destructive hover:text-destructive-foreground my-auto"
                         onClick={() => {
                           handleRemoveUser(user);
                         }}
                       >
-                        <Icons.close aria-hidden="true" />
+                        <Icons.close
+                          aria-hidden="true"
+                          // className="hover:bg-destructive hover:text-destructive-foreground"
+                        />
                       </Button>
-                      {user.full_name}
-                    </CommandItem>
+                      <CommandItem className="aria-selected:bg-background">
+                        {user.full_name}
+                      </CommandItem>
+                    </div>
                   ))}
               </CommandGroup>
-              <CommandSeparator
-                className="bg-gray-500 border-t"
-                alwaysRender={true}
-              />
+              <CommandSeparator alwaysRender={true} />
               <Button
                 variant="default"
                 onClick={() =>

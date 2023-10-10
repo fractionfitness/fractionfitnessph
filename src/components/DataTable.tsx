@@ -74,20 +74,17 @@ export function DataTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn('name')?.setFilterValue(event.target.value)
           }
-          className="max-w-sm bg-zinc-900 text-gray-50"
+          className="max-w-sm bg-background"
         />
         {/* this should be a dropdown menu to be populated by the page on the employee's employer (group) | a group can have several descendants */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="ml-auto bg-zinc-900 text-gray-50"
-            >
+            <Button variant="outline" className="ml-auto">
               Columns
               <Icons.chevronDown />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-zinc-900 text-gray-50">
+          <DropdownMenuContent align="end" className="bg-secondary">
             {table
               .getAllColumns()
               .filter((column) => column.getCanHide())
@@ -95,7 +92,7 @@ export function DataTable<TData, TValue>({
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
-                    className="capitalize"
+                    className="capitalize cursor-pointer focus:bg-background"
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) =>
                       column.toggleVisibility(!!value)
@@ -113,7 +110,6 @@ export function DataTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn('group')?.setFilterValue(event.target.value)
           }
-          className="max-w-sm bg-zinc-900 text-gray-50"
         /> */}
       </div>
       <div className="rounded-md border">

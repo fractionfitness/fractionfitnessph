@@ -1,8 +1,11 @@
 import {
+  LucideProps,
   ArrowUpDown,
   ChevronDown,
-  LucideProps,
+  Clock,
+  // KeyRound,
   Loader,
+  // LogIn,
   MoreVertical,
   Plus,
   Search,
@@ -14,6 +17,9 @@ import {
 export const Icons = {
   arrowUpDown: ArrowUpDown,
   chevronDown: ChevronDown,
+  clock: Clock,
+  // login: LogIn,
+  // key: KeyRound,
   logoPlaceholder: SquareSlash,
   loader: Loader,
   optionsVertical: MoreVertical,

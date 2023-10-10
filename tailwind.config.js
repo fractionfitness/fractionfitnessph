@@ -53,6 +53,9 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        error: {
+          DEFAULT: 'hsl(var(--error))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -76,5 +79,20 @@ module.exports = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    require('tailwindcss/plugin')(function ({ addUtilities }) {
+      addUtilities({
+        // extending tailwind utils using plugins
+        '.appearance-textfield': {
+          // this doesn't work on chrome yet
+          '-webkit-appearance': 'none',
+          margin: 0,
+          //  this only works on mozilla
+          // order/precedence matters | -moz-appearance must be last
+          '-moz-appearance': 'textfield',
+        },
+      });
+    }),
+  ],
 };

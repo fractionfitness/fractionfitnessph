@@ -4,7 +4,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { MemberRole, MemberStatus } from '@prisma/client';
 import { memberContent } from '@/config';
-import { editMemberAction, removeMemberAction } from '@/actions/user';
+import { editMemberAction, removeMemberAction } from '@/actions/member';
 import { Icons } from '@/components/Icons';
 import { Button } from '@/components/ui-shadcn/Button';
 import {
@@ -98,14 +98,9 @@ export const columns: ColumnDef<Member>[] = [
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className="hover:bg-zinc-500 hover:text-zinc-50"
-              >
-                {role.charAt(0)}
-              </Button>
+              <Button variant="ghost">{role.charAt(0)}</Button>
             </TooltipTrigger>
-            <TooltipContent className="bg-zinc-900 text-zinc-50">
+            <TooltipContent>
               <p>{role.charAt(0) + role.slice(1, role.length).toLowerCase()}</p>
             </TooltipContent>
           </Tooltip>
@@ -149,7 +144,7 @@ function GroupColumnFilterMultiple({ column, groups }) {
           <Icons.chevronDown />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-zinc-900 text-gray-50">
+      <DropdownMenuContent align="end" className="bg-secondary">
         {queriedGroupsArrForDropdown.map((item, index) => {
           return (
             <DropdownMenuCheckboxItem
@@ -208,12 +203,12 @@ function GroupColumnFilterOne({ column, groups }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="ml-auto bg-zinc-900 text-gray-50">
+        <Button variant="outline" className="ml-auto">
           Group
           <Icons.chevronDown />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-zinc-900 text-gray-50">
+      <DropdownMenuContent align="end" className="bg-secondary">
         {groups.map((item, index) => {
           return (
             <DropdownMenuCheckboxItem
