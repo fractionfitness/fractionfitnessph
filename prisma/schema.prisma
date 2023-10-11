@@ -80,7 +80,7 @@ model Group {
   members   Member[]
   parents   GroupRelation[] @relation(name: "child")
   children  GroupRelation[] @relation(name: "parent")
-  sessions  Session[]
+  sessions  GroupSession[]
   owner     User            @relation(fields: [owner_id], references: [id])
   owner_id  Int
 
@@ -146,7 +146,7 @@ model GroupRelation {
 }
 
 // Group 1:m
-model Session {
+model GroupSession {
   id              Int             @id @default(autoincrement())
   group           Group           @relation(fields: [group_id], references: [id])
   group_id        Int
@@ -166,10 +166,10 @@ model Session {
   @@index(fields: [group_id, day]) // still needed?
 }
 
-// Session 1:m Members 1:m
+// GroupSession 1:m Members 1:m
 model MemberCheckin {
   id         Int     @id @default(autoincrement())
-  session    Session @relation(fields: [session_id], references: [id])
+  session    GroupSession @relation(fields: [session_id], references: [id])
   session_id Int
   member     Member  @relation(fields: [member_id], references: [id])
   member_id  Int
@@ -180,6 +180,7 @@ model MemberCheckin {
   // user_id Int
 
   datetime DateTime @default(now())
+
   // why doesnt this work? maybe because now() also has a value for time while @db.Date() specifies only a value for date
   // date          DateTime @default(now()) @db.Date()
 

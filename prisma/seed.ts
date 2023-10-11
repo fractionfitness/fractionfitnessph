@@ -28,7 +28,7 @@ const {
   users,
   userProfiles,
   groupsAndProfiles,
-  sessions,
+  groupSessions,
   groupRelations,
   employees,
   members,
@@ -40,7 +40,7 @@ async function main() {
   const deleteUserProfiles = prisma.userProfile.deleteMany();
   const deleteGroups = prisma.group.deleteMany();
   const deleteGroupProfiles = prisma.groupProfile.deleteMany();
-  const deleteSessions = prisma.session.deleteMany();
+  const deleteGroupSessions = prisma.groupSession.deleteMany();
   const deleteGroupRelations = prisma.groupRelation.deleteMany();
   const deleteEmployees = prisma.employee.deleteMany();
   const deleteMembers = prisma.member.deleteMany();
@@ -51,7 +51,7 @@ async function main() {
     deleteEmployees,
     deleteMembers,
     deleteGroupRelations,
-    deleteSessions,
+    deleteGroupSessions,
     deleteGroupProfiles,
     deleteGroups,
     deleteUserProfiles,
@@ -120,8 +120,8 @@ async function main() {
     }
   });
 
-  const createSessions = prisma.session.createMany({
-    data: sessions,
+  const createGroupSessions = prisma.groupSession.createMany({
+    data: groupSessions,
     skipDuplicates: true,
   });
 
@@ -148,7 +148,7 @@ async function main() {
   await prisma.$transaction([
     ...createUsersAndProfilesArray,
     ...createGroupsAndProfilesArray,
-    createSessions,
+    createGroupSessions,
     createGroupRelations,
     createEmployees,
     createMembers,

@@ -273,7 +273,7 @@
       "owner_id": 4
     }
   ],
-  "sessions": [
+  "groupSessions": [
     {
       "id": 1,
       "group_id": 3,
