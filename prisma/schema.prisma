@@ -70,8 +70,6 @@ model UserProfile {
   @@unique([first_name, middle_name, last_name, suffix_name]) // this might be slow and duplicate names may exist | add birthdate to make it more unlikely for duplicates? but this still may not be sufficient
 }
 
-
-
 // GroupProfile 1?:1 Employees m?:1 Members m?:1 User 1:m?
 model Group {
   id        Int             @id @default(autoincrement())
@@ -169,10 +167,10 @@ model GroupSession {
 
 // GroupSession 1:m Members 1:m
 model MemberCheckin {
-  id         Int     @id @default(autoincrement())
+  id         Int          @id @default(autoincrement())
   session    GroupSession @relation(fields: [session_id], references: [id])
   session_id Int
-  member     Member  @relation(fields: [member_id], references: [id])
+  member     Member       @relation(fields: [member_id], references: [id])
   member_id  Int
 
   // alternative fields+relation to above | w/c is better?
