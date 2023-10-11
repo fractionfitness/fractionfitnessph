@@ -28,7 +28,7 @@ async function hashPassword(password) {
 /* TODOS: ////////////////////////////////////////////////////////////////////
 
 - fix user, employee, and member roles since right now it is only assuming the default
-- if randomly generating sessions, there must be no overlap of start_at for any two sessions on the same day
+- if randomly generating groupSessions, there must be no overlap of start_at for any two groupSessions on the same day
 - define testing criteria - assign to pooch
 - user profiles can be empty because some users will only have an email but seedInputData assumes users will always have a userProfile
 - Model ids must be uuid
@@ -90,7 +90,7 @@ const groupRelationsData = [
   { parent: 'fraction fitness', child: 'fraction gymnastics' },
 ];
 
-const sessionData = {
+const groupSessionData = {
   'fraction gymnastics': [
     {
       name: 'Gymnastics Sat',
@@ -100,7 +100,7 @@ const sessionData = {
       end_at: '1970-01-01T10:30:00.000+08:00',
     },
   ],
-  // better to not separate fraction jj adults and teens into 2 groups since alot of their sessions have the same start_at values
+  // better to not separate fraction jj adults and teens into 2 groups since alot of their groupSessions have the same start_at values
   'fraction jiu jitsu': [
     {
       name: 'Adults Morning',
@@ -127,7 +127,7 @@ const sessionData = {
       start_at: '1970-01-01T19:30:00+08:00',
       end_at: '1970-01-01T21:30:00+08:00',
     },
-    // group owner's choide whether to separate gi and no gi into different sessions
+    // group owner's choide whether to separate gi and no gi into different groupSessions
     {
       name: 'Adults Evening - No Gi',
       days: [thu],
@@ -152,7 +152,7 @@ const sessionData = {
       start_at: '1970-01-01T16:30:00+08:00',
       end_at: '1970-01-01T18:00:00+08:00',
     },
-    // either more general or more granular sessions but best to only have one unique group+session time period  to avoid confusion for members and employees, when checking in
+    // either more general or more granular groupSessions but best to only have one unique group + groupSession time period  to avoid confusion for members and employees, when checking in
     {
       name: 'Minors Lvl 1 Fri',
       days: [fri],
@@ -183,7 +183,7 @@ const sessionData = {
       start_at: '1970-01-01T14:30:00+08:00',
       end_at: '1970-01-01T16:30:00+08:00',
     },
-    // even though teens lvl 2 & 3 sessions end at different times
+    // even though teens lvl 2 & 3 groupSessions end at different times
     // (16:00 & 16:30, respectively), we don't monitor checkouts so it wont
     // matter in the end
 
@@ -274,11 +274,13 @@ async function generateFakeModelDataArrays() {
       middle_name,
       last_name,
       suffix_name,
-      full_name:
-        `${first_name} ${middle_name} ${last_name} ${suffix_name}`.replace(
-          /\s+/g,
-          '',
-        ),
+      // full_name:
+      //   `${first_name} ${middle_name} ${last_name} ${suffix_name}`.replace(
+      //     /\s+/g,
+      //     '',
+      //   ),
+      // separate name values using comma | name values can have spaces in them (e.g. first_name can have two names)
+      full_name: `${first_name},${middle_name},${last_name},${suffix_name}`,
     };
   });
 
@@ -303,28 +305,28 @@ async function generateFakeModelDataArrays() {
   });
 
   let idCount = 1;
-  let sessions = [];
-  // loop over sessionData object's keys (referencing each group name) to generate all session records
+  let groupSessions = [];
+  // loop over groupSessionData object's keys (referencing each group name) to generate all groupSession records
   // might be better to use Array.concat() instead of push, and use foreach instead of map
-  for (let groupKey in sessionData) {
+  for (let groupKey in groupSessionData) {
     const foundGroupObj = groupsAndProfiles.filter(
       (group) => group.name === groupKey,
     )[0];
-    sessionData[groupKey].map(({ name, days, start_at, end_at }) => {
-      // generate a session record for each day
-      const sessionsPerDay = days.map((day) => ({
+    groupSessionData[groupKey].map(({ name, days, start_at, end_at }) => {
+      // generate a groupSession record for each day
+      const groupSessionsPerDay = days.map((day) => ({
         id: idCount++,
         group_id: foundGroupObj.id,
         name,
         day,
         start_at,
         end_at,
-        // assume status for any session is always active
+        // assume status for any groupSession is always active
       }));
-      sessions.push(...sessionsPerDay);
+      groupSessions.push(...groupSessionsPerDay);
     });
   }
-  // reset idCount when finished looping over sessionData obj
+  // reset idCount when finished looping over groupSessionData obj
   idCount = 1;
 
   const groupRelations = groupRelationsData.map((item) => ({
@@ -399,18 +401,18 @@ async function generateFakeModelDataArrays() {
 
   let memberCheckins = [];
   members.map((member) => {
-    // get all of the current member's group sessions
-    const availableSessionsForMember = sessions.filter(
-      (session) => session.group_id === member.group_id,
+    // get all of the current member's group groupSessions
+    const availableSessionsForMember = groupSessions.filter(
+      (groupSession) => groupSession.group_id === member.group_id,
     );
 
-    // check if member's group has a session
+    // check if member's group has a groupSession
     if (availableSessionsForMember.length > 0) {
-      // for every member generate a random number of 0-10 which will be the loop counter to generate sessions
+      // for every member generate a random number of 0-10 which will be the loop counter to generate groupSessions
       const numberOfCheckins = faker.helpers.rangeToNumber({ min: 0, max: 10 });
 
       for (let i = 0; i < numberOfCheckins; i++) {
-        // won't matter if selectedSessionId repeats since: (1) prisma will ensure duplicate records are not written to the db , and (2) datetimestamp should always be different every loop since a memberCheckin could be the same session but different datetimestamp
+        // won't matter if selectedSessionId repeats since: (1) prisma will ensure duplicate records are not written to the db , and (2) datetimestamp should always be different every loop since a memberCheckin could be the same groupSession but different datetimestamp
         const selectedSession = faker.helpers.arrayElement(
           availableSessionsForMember,
         );
@@ -419,7 +421,7 @@ async function generateFakeModelDataArrays() {
           id: idCount++,
           session_id: selectedSession.id,
           member_id: member.id,
-          // datetimestamp should be a random Date that must be the same day as the session, and checkin time is in between the session's start_at and end_at values
+          // datetimestamp should be a random Date that must be the same day as the groupSession, and checkin time is in between the groupSession's start_at and end_at values
           datetime: generateRandomDateTimeObj(),
         };
 
@@ -432,7 +434,7 @@ async function generateFakeModelDataArrays() {
     users,
     userProfiles,
     groupsAndProfiles,
-    sessions,
+    groupSessions,
     groupRelations,
     employees,
     members,

@@ -58,18 +58,17 @@ model UserProfile {
   user        User    @relation(fields: [user_id], references: [id])
   user_id     Int     @unique
   first_name  String
-  middle_name String
+  middle_name String?
   last_name   String
   suffix_name String?
   full_name   String  @unique
+  // choose either @@unique and @unique to implement since full_name is just computed | which is better?
 
   // @@index(fields: [user_id]) // no need since already have a @unique constraint w/c creates an index
   // @unique on a computed value might not be allowed
   // use dbgenerated() to use a mysql function for full_name
-  @@unique([first_name, middle_name, last_name, suffix_name])
+  @@unique([first_name, middle_name, last_name, suffix_name]) // this might be slow and duplicate names may exist | add birthdate to make it more unlikely for duplicates? but this still may not be sufficient
 }
-
-// choose either @@unique and @unique to implement since full_name is just computed | which is better?
 
 // GroupProfile 1?:1 Employees m?:1 Members m?:1 User 1:m?
 model Group {
@@ -80,7 +79,7 @@ model Group {
   members   Member[]
   parents   GroupRelation[] @relation(name: "child")
   children  GroupRelation[] @relation(name: "parent")
-  sessions  Session[]
+  sessions  GroupSession[]
   owner     User            @relation(fields: [owner_id], references: [id])
   owner_id  Int
 
@@ -146,7 +145,7 @@ model GroupRelation {
 }
 
 // Group 1:m
-model Session {
+model GroupSession {
   id              Int             @id @default(autoincrement())
   group           Group           @relation(fields: [group_id], references: [id])
   group_id        Int
@@ -166,12 +165,12 @@ model Session {
   @@index(fields: [group_id, day]) // still needed?
 }
 
-// Session 1:m Members 1:m
+// GroupSession 1:m Members 1:m
 model MemberCheckin {
-  id         Int     @id @default(autoincrement())
-  session    Session @relation(fields: [session_id], references: [id])
+  id         Int          @id @default(autoincrement())
+  session    GroupSession @relation(fields: [session_id], references: [id])
   session_id Int
-  member     Member  @relation(fields: [member_id], references: [id])
+  member     Member       @relation(fields: [member_id], references: [id])
   member_id  Int
 
   // alternative fields+relation to above | w/c is better?
@@ -180,6 +179,7 @@ model MemberCheckin {
   // user_id Int
 
   datetime DateTime @default(now())
+
   // why doesnt this work? maybe because now() also has a value for time while @db.Date() specifies only a value for date
   // date          DateTime @default(now()) @db.Date()
 

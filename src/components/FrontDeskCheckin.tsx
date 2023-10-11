@@ -71,14 +71,14 @@ function SelectSessions({ sessions, handleSelectSession }) {
         handleSelectSession(selectedSession);
       }}
     >
-      <Label htmlFor="session">Check-in for:</Label>
-      <SelectTrigger className={cn('min-w-full h-14')} name="session">
+      <Label htmlFor="select-session">Check-in for:</Label>
+      <SelectTrigger className={cn('min-w-full h-14')} id="select-session">
         <SelectValue
           placeholder="Select a Session to Check-in"
           className="mt-0"
         />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="w-[348px] bg-secondary">
         <SelectGroup>
           <SelectLabel>Today&apos;s Sessions</SelectLabel>
           {sessions.length > 0 &&
@@ -91,7 +91,8 @@ function SelectSessions({ sessions, handleSelectSession }) {
                 <SelectItem
                   key={item.id}
                   value={item.name}
-                  className="cursor-pointer py-2"
+                  // className="cursor-pointer py-2 px-2 focus:bg-background"
+                  className="cursor-pointer focus:bg-background"
                 >
                   {`${timeInterval} ${item.group.name} ${item.name}`}
                 </SelectItem>
@@ -360,7 +361,7 @@ function CheckinCard({ mode, sessions }) {
           selectedSession={selectedSession}
         />
         <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="name" className="text-left">
+          <Label htmlFor="member-pin" className="text-left">
             {`${userType} PIN`}
           </Label>
           <div className="flex flex-row bg-secondary">
@@ -370,7 +371,7 @@ function CheckinCard({ mode, sessions }) {
             <Input
               ref={userPinRef}
               required
-              name="pin"
+              id="member-pin"
               placeholder="Enter numerical code..."
               type="number"
               // type="string"
