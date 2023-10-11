@@ -3,7 +3,8 @@
 import prisma from '@/lib/prisma';
 
 export async function searchUsersAction(query: string) {
-  const names = query.split(' ');
+  // replace all commas (,) with a space then split values in between spaces
+  const names = query.replace(/[,]+/g, ' ').trim().split(/[\s]+/);
 
   if (query.length === 0) return null;
 

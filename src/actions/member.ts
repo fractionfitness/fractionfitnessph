@@ -14,13 +14,16 @@ export async function searchMemberAction(
   // console.log('searching members...', query, groupId);
   if (query.length === 0 || !groupId) return null;
 
+  // replace all commas (,) with a space then split values in between spaces
+  const name = query.replace(/[,]+/g, ' ').trim().replace(/[\s]+/g, ',');
+
   const matchingMembers = await prisma.member.findMany({
     where: {
       group_id: groupId,
       user: {
         profile: {
           full_name: {
-            contains: query,
+            contains: name,
           },
         },
       },
