@@ -58,18 +58,19 @@ model UserProfile {
   user        User    @relation(fields: [user_id], references: [id])
   user_id     Int     @unique
   first_name  String
-  middle_name String
+  middle_name String?
   last_name   String
   suffix_name String?
   full_name   String  @unique
+  // choose either @@unique and @unique to implement since full_name is just computed | which is better?
 
   // @@index(fields: [user_id]) // no need since already have a @unique constraint w/c creates an index
   // @unique on a computed value might not be allowed
   // use dbgenerated() to use a mysql function for full_name
-  @@unique([first_name, middle_name, last_name, suffix_name])
+  @@unique([first_name, middle_name, last_name, suffix_name]) // this might be slow and duplicate names may exist | add birthdate to make it more unlikely for duplicates? but this still may not be sufficient
 }
 
-// choose either @@unique and @unique to implement since full_name is just computed | which is better?
+
 
 // GroupProfile 1?:1 Employees m?:1 Members m?:1 User 1:m?
 model Group {
