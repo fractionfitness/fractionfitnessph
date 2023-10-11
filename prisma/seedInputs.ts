@@ -274,11 +274,13 @@ async function generateFakeModelDataArrays() {
       middle_name,
       last_name,
       suffix_name,
-      full_name:
-        `${first_name} ${middle_name} ${last_name} ${suffix_name}`.replace(
-          /\s+/g,
-          '',
-        ),
+      // full_name:
+      //   `${first_name} ${middle_name} ${last_name} ${suffix_name}`.replace(
+      //     /\s+/g,
+      //     '',
+      //   ),
+      // separate name values using comma | name values can have spaces in them (e.g. first_name can have two names)
+      full_name: `${first_name},${middle_name},${last_name},${suffix_name}`,
     };
   });
 
