@@ -168,7 +168,7 @@ function SearchSelectOneUserCommand({
     return () => {
       ignore = true;
     };
-  }, [debouncedQuery]);
+  }, [debouncedQuery, selectedSession]);
 
   const handleInputChange = (e) => {
     setInputValue(e);
@@ -235,7 +235,7 @@ function SearchSelectOneUserCommand({
               'm-auto',
             )}
           >
-            <Icons.chevronDown color="white" />
+            {hasValidQuery && <Icons.chevronDown color="white" />}
           </Button>
         </div>
       </div>
