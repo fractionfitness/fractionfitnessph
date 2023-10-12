@@ -139,22 +139,24 @@ function SearchSelectOneUserCommand({
       if (debouncedQuery.length === 0) {
         setSearchResults([]);
         handleSelectUser(null);
-      }
-      // no need to check debouncedQuery.length since already checked above
-      if (debouncedQuery.length > 0) {
+      } else {
         try {
           setLoading(true);
           setSearchResults([]);
           handleSelectUser(null);
-          const results = await searchMemberAction(
-            debouncedQuery,
-            selectedSession ? selectedSession.group_id : null,
-          );
 
-          // ignore query result and do not setSearchResults, if cleanup function executed
-          if (ignore === false && results) {
-            setSearchResults(results);
+          if (selectedSession) {
+            const results = await searchMemberAction(
+              debouncedQuery,
+              selectedSession ? selectedSession.group_id : null,
+            );
+
+            // ignore query result and do not setSearchResults, if cleanup function executed
+            if (ignore === false && results) {
+              setSearchResults(results);
+            }
           }
+
           setCommandOpen(true);
           setLoading(false);
         } catch (err) {
@@ -240,16 +242,20 @@ function SearchSelectOneUserCommand({
         </div>
       </div>
       <CommandList>
-        {!hasSearchResults && hasValidQuery && (
+        {/* {!hasSearchResults && hasValidQuery && (
           <CommandEmpty
             className={cn(loading ? 'hidden' : 'py-6 text-center text-sm')}
           >
             {`Using Command Empty: ${userType} not found.`}
           </CommandEmpty>
-        )}
+        )} */}
         {/* alternative to CommandEmpty behavior | will disappear once button is clicked */}
-        {!hasSearchResults && hasValidQuery && commandOpen && (
-          <p>{`Custom Empty Search: ${userType} not found.`}</p>
+        {!hasSearchResults && hasValidQuery && commandOpen && !loading && (
+          <p className="py-6 text-center text-sm text-error">
+            {!selectedSession
+              ? `Please select a Session.`
+              : `${userType} not found.`}
+          </p>
         )}
         {loading && (
           <div className="space-y-1 overflow-hidden px-1 py-2">
