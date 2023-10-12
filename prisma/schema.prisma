@@ -15,6 +15,7 @@ enum UserRole {
   USER
   DEV
   ADMIN
+  GUEST
 }
 
 enum EmployeeRole {
@@ -43,7 +44,7 @@ enum Day {
 // UserProfile 1?:1 Employees m?:1 Members m?:1 Group m?:1
 model User {
   id          Int          @id @default(autoincrement())
-  email       String       @unique
+  email       String?      @unique
   password    String?
   role        UserRole     @default(USER)
   profile     UserProfile?
@@ -77,13 +78,13 @@ model Group {
   profile   GroupProfile?
   employees Employee[]
   members   Member[]
-  parents   GroupRelation[] @relation(name: "child")
-  children  GroupRelation[] @relation(name: "parent")
+  parents   GroupRelation[] @relation(name: "Child")
+  children  GroupRelation[] @relation(name: "Parent")
   sessions  GroupSession[]
   owner     User            @relation(fields: [owner_id], references: [id])
   owner_id  Int
 
-  @@index([owner_id])
+  @@index(fields: [owner_id])
 }
 
 // Group 1:1
@@ -132,13 +133,13 @@ model Member {
 // Group (Parent) 1:m Group (Child) 1:m | m:m self-relation
 model GroupRelation {
   // id        Int   @id @default(autoincrement())
-  parent    Group @relation(name: "parent", fields: [parent_id], references: [id])
+  parent    Group @relation(name: "Parent", fields: [parent_id], references: [id])
   parent_id Int
-  child     Group @relation(name: "child", fields: [child_id], references: [id])
+  child     Group @relation(name: "Child", fields: [child_id], references: [id])
   child_id  Int
   // @@unique(fields: [parent_id, child_id])
 
-  @@id([parent_id, child_id])
+  @@id(fields: [parent_id, child_id])
   // need to index user and group ids individually?
   @@index(fields: [parent_id]) // still needed for faster queries?
   @@index(fields: [child_id]) // still needed for faster queries?
