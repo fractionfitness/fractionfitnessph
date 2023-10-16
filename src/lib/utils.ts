@@ -47,6 +47,17 @@ export const convertToMysqlDatetimeString = (dateObj) => {
   return `${year}-${month}-${day}T${hours}:${mins}:${secs}.${ms}${TIMEZONE_OFFSET}`;
 };
 
+// generates a datetime obj that will be used to constrain employee check ins to only once per day (unique constraint on employee checkins on a group)
+// time portion is set to 12:00MN/24:00 local time
+export const convertToMysqlDateString = (dateObj) => {
+  const year = dateObj.getFullYear().toString();
+  // getMonth returns a value of 0-11 for the 12 months
+  const month = `${padLeftWithOneZero((dateObj.getMonth() + 1).toString())}`;
+  const day = `${padLeftWithOneZero(dateObj.getDate().toString())}`;
+
+  return `${year}-${month}-${day}T00:00:00.000${TIMEZONE_OFFSET}`;
+};
+
 export const getJsDateObjValues = (dateObj) => {
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth();

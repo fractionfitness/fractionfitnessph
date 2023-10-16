@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import prisma from '@/lib/prisma';
 import { hashPassword } from '@/lib/serverUtils';
+import { convertToMysqlDateString } from '@/lib/utils';
 
 export async function searchUsersAction(query: string) {
   // replace all commas (,) with a space then split values in between spaces
@@ -122,6 +123,7 @@ export async function createUserProfileMemberCheckin({
             checkins: {
               create: {
                 session_id,
+                date: convertToMysqlDateString(new Date()),
               },
             },
           },
