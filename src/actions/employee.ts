@@ -4,6 +4,40 @@ import { revalidatePath } from 'next/cache';
 
 import prisma from '@/lib/prisma';
 
+export async function searchEmployeeAction(
+  query: string,
+  groupId: number | null,
+) {
+  // console.log('searching members...', query, groupId);
+  if (query.length === 0 || !groupId) return null;
+
+  // replace all commas (,) with a space then split values in between spaces
+  const name = query.replace(/[,]+/g, ' ').trim().replace(/[\s]+/g, ',');
+
+  const matchingEmployees = await prisma.employee.findMany({
+    where: {
+      group_id: groupId,
+      user: {
+        profile: {
+          full_name: {
+            contains: name,
+          },
+        },
+      },
+    },
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
+    },
+  });
+
+  if (!matchingEmployees) return null;
+  return matchingEmployees;
+}
+
 export async function addUsersToGroupEmploymentAction(usersToAdd, groupId) {
   const employees = usersToAdd.map((user) => ({
     user_id: user.id,

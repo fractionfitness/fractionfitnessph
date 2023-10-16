@@ -1,3 +1,5 @@
+export const HASH_SALT = 12;
+
 // fixes => ReferenceError: Cannot access 'padLeftWithOneZero' before initialization
 // cannot import padLeftWithOneZero from @/lib/utils since config.ts is loaded first
 const padLeftWithOneZero = (str: String) => {
@@ -5,9 +7,9 @@ const padLeftWithOneZero = (str: String) => {
 };
 
 export const TIMEZONE_OFFSET_VALUE = 8; // Singapore Timezone (UTC +8)
-export const TIMEZONE_OFFSET = `'+${padLeftWithOneZero(
+export const TIMEZONE_OFFSET = `+${padLeftWithOneZero(
   TIMEZONE_OFFSET_VALUE.toString(),
-)}:00'`;
+)}:00`;
 export const DAY_NAMES = [
   'SUNDAY',
   'MONDAY',

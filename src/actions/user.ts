@@ -1,6 +1,9 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import prisma from '@/lib/prisma';
+import { hashPassword } from '@/lib/serverUtils';
 
 export async function searchUsersAction(query: string) {
   // replace all commas (,) with a space then split values in between spaces
@@ -17,7 +20,13 @@ export async function searchUsersAction(query: string) {
             contains: name,
           },
         },
-        include: { user: true },
+        include: {
+          user: {
+            include: {
+              profile: true,
+            },
+          },
+        },
       }),
     ),
   ]);
@@ -37,6 +46,93 @@ export async function searchUsersAction(query: string) {
   });
 
   return userResults;
+}
+
+export async function createUserProfileMember({
+  email,
+  password,
+  first_name,
+  middle_name,
+  last_name,
+  suffix_name,
+  group_id,
+}) {
+  try {
+    const result = await prisma.user.create({
+      data: {
+        email: email.length === 0 ? null : email,
+        password: password.length === 0 ? null : await hashPassword(password),
+        role: email.length === 0 ? 'GUEST' : 'USER',
+        profile: {
+          create: {
+            first_name,
+            // we don't want to write empty strings into the db | all other fields, w/o this expression, are required
+            // either null or undefined works
+            middle_name: middle_name.length === 0 ? null : middle_name,
+            last_name,
+            suffix_name: suffix_name.length === 0 ? null : suffix_name,
+            full_name: `${first_name},${middle_name},${last_name},${suffix_name}`,
+          },
+        },
+        memberships: {
+          create: {
+            group_id,
+          },
+        },
+      },
+    });
+    console.log('result', result);
+    revalidatePath(`dashboard/group/${group_id}/front-desk`);
+  } catch (e) {
+    // console.error(new Error(e));
+    console.error(e);
+  }
+}
+
+export async function createUserProfileMemberCheckin({
+  email,
+  password,
+  first_name,
+  middle_name,
+  last_name,
+  suffix_name,
+  session_id,
+  group_id,
+}) {
+  try {
+    const result = await prisma.user.create({
+      data: {
+        email: email.length === 0 ? null : email,
+        password: password.length === 0 ? null : await hashPassword(password),
+        role: email.length === 0 ? 'GUEST' : 'USER',
+        profile: {
+          create: {
+            first_name,
+            // we don't want empty strings in the db | all other fields are required
+            // use either null or undefined
+            middle_name: middle_name.length === 0 ? null : middle_name,
+            last_name,
+            suffix_name: suffix_name.length === 0 ? null : suffix_name,
+            full_name: `${first_name},${middle_name},${last_name},${suffix_name}`,
+          },
+        },
+        memberships: {
+          create: {
+            group_id,
+            checkins: {
+              create: {
+                session_id,
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log('result', result);
+    revalidatePath(`dashboard/group/${group_id}/front-desk`);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 // original query based on sadmann7/skateshop repo
