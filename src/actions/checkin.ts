@@ -14,6 +14,7 @@ import prisma from '@/lib/prisma';
 // })
 // addMemberCheckin(selectedSession, selectedUser, userPinRef.current.value)
 export async function addMemberCheckin(session, member, pin) {
+  // add pin check here
   // const user = prisma.user.findFirst({ where: { id: session.user_id } });
   // // impossible to get non-existent user since only group members are sent as an argument to the action
   // if (user && user.pin === pin) throw new Error('user account non-existent / wrong pin')
@@ -32,4 +33,26 @@ export async function addMemberCheckin(session, member, pin) {
   revalidatePath(`dashboard/group/${session.group_id}/front-desk`);
 
   // return checkin
+}
+
+export async function addEmployeeCheckin(employee, pin) {
+  // add pin check here
+
+  console.log('addEmployeeCheckin args', employee, pin);
+
+  try {
+    const checkin = await prisma.employeeCheckin.create({
+      data: {
+        group_id: employee.group_id,
+        user_id: employee.user_id,
+      },
+    });
+    // return checkin;
+
+    // use revalidatePath if no need to handle error/success states, client-side, after executing server action
+    revalidatePath(`dashboard/group/${employee.group_id}/front-desk`);
+  } catch (e) {
+    console.error(e);
+    return new Error(e);
+  }
 }

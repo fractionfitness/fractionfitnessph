@@ -43,10 +43,12 @@ async function main() {
   const deleteGroupSessions = prisma.groupSession.deleteMany();
   const deleteGroupRelations = prisma.groupRelation.deleteMany();
   const deleteEmployees = prisma.employee.deleteMany();
+  const deleteEmployeeCheckins = prisma.employeeCheckin.deleteMany();
   const deleteMembers = prisma.member.deleteMany();
   const deleteMemberCheckins = prisma.memberCheckin.deleteMany();
 
   await prisma.$transaction([
+    deleteEmployeeCheckins,
     deleteMemberCheckins,
     deleteEmployees,
     deleteMembers,

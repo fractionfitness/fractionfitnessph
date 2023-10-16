@@ -103,6 +103,7 @@ model Employee {
   user_id  Int
   group    Group        @relation(fields: [group_id], references: [id])
   group_id Int
+  checkins EmployeeCheckin[]
   role     EmployeeRole @default(STAFF)
   // @@unique(fields: [user_id, group_id])
 
@@ -195,4 +196,25 @@ model MemberCheckin {
   @@index(fields: [datetime]) // needed for faster queries when searching checkins per day?
 }
 
-// add Holidays/Day-offs/CancelledSessions Model
+// GroupSession 1:m Members 1:m
+model EmployeeCheckin {
+  id          Int      @id @default(autoincrement())
+  employee    Employee @relation(fields: [user_id, group_id], references: [user_id, group_id])
+  user_id     Int
+  group_id    Int
+  checked_in  DateTime @default(now())
+
+  // no UI for employee check out yet
+  // checked_out DateTime
+
+  date        DateTime // still includes the time because of timezone offsets (although the same values for all employee checkins for the day e.g. 2023-10-16T16:00:00.000Z) | still needed to ensure only one checkin per employee per day
+
+  @@unique(fields: [user_id, group_id, date])
+  // need to index employee and group ids individually?
+  @@index(fields: [user_id, group_id])
+  @@index(fields: [user_id])
+  @@index(fields: [group_id])
+  @@index(fields: [date]) // needed for faster queries when searching checkins per day?
+}
+
+// add Holidays/Day-offs/CancelledSessions Model?
