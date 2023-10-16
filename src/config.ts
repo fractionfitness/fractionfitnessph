@@ -72,3 +72,9 @@ export const employeeContent = {
     // 'END-OF-VOLUNTEER SERVICE',
   ],
 };
+export const accountContent = {
+  userType: 'Account',
+  groupType: 'Site',
+  userRoles: ['USER', 'DEV', 'ADMIN', 'GUEST'],
+  userStatus: ['ACTIVE', 'INACTIVE'],
+};
