@@ -168,7 +168,7 @@ export default function AddUserCommand({ mode }) {
         shouldFilter={false}
       >
         <CommandInput
-          placeholder="Search users..."
+          placeholder="Search account names..."
           value={inputValue}
           onValueChange={handleInputChange}
         />
