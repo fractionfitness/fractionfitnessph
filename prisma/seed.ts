@@ -72,6 +72,7 @@ async function main() {
       last_name,
       suffix_name,
       full_name,
+      pin,
     } = foundUserProfile;
 
     return prisma.user.create({
@@ -87,6 +88,7 @@ async function main() {
             last_name,
             suffix_name,
             full_name,
+            pin,
           },
         },
       },

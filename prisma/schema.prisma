@@ -64,6 +64,7 @@ model UserProfile {
   suffix_name String?
   full_name   String  @unique
   // choose either @@unique and @unique to implement since full_name is just computed | which is better?
+  pin         Int?    @db.UnsignedSmallInt
 
   // @@index(fields: [user_id]) // no need since already have a @unique constraint w/c creates an index
   // @unique on a computed value might not be allowed
@@ -98,7 +99,9 @@ model GroupProfile {
 
 // User 1:m Group 1:m
 model Employee {
+  // add id field and remove composite id from Employee Model?
   // id       Int          @id @default(autoincrement())
+
   user     User              @relation(fields: [user_id], references: [id])
   user_id  Int
   group    Group             @relation(fields: [group_id], references: [id])
@@ -181,6 +184,7 @@ model MemberCheckin {
   // user_id Int
 
   datetime DateTime @default(now())
+  date     DateTime
 
   // why doesnt this work? maybe because now() also has a value for time while @db.Date() specifies only a value for date
   // date          DateTime @default(now()) @db.Date()
@@ -189,11 +193,11 @@ model MemberCheckin {
   // date DateTime @default(dbgenerated("CURDATE()")) @db.Date()
   // time DateTime @default(dbgenerated("CURTIME()")) @db.Time()
 
-  @@unique(fields: [session_id, member_id, datetime])
-  // need to index member and group ids individually?
+  @@unique(fields: [session_id, member_id, date])
+  // need to index member and session ids individually?
   @@index(fields: [session_id]) // still needed?
   @@index(fields: [member_id])
-  @@index(fields: [datetime]) // needed for faster queries when searching checkins per day?
+  @@index(fields: [date]) // needed for faster queries when searching checkins per day?
 }
 
 // GroupSession 1:m Members 1:m
