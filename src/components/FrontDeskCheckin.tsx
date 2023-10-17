@@ -286,7 +286,7 @@ function SearchSelectOneUserCommand({
   );
 }
 
-export default function FrontDeskCheckin({ sessions }) {
+export default function FrontDeskCheckin({ sessions, employmentGroups }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [pinInputState, setPinInputState] = useState(null);

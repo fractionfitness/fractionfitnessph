@@ -9,6 +9,7 @@ import {
   // compareDateObjToSessionDay,
   // didDateOccurInASpecific24HourPeriod,
 } from '@/lib/utils';
+import getUserEmploymentGroups from '@/lib/prismaQueries/getUserEmploymentGroups';
 
 import FrontDeskSessions from '@/components/FrontDeskSessions';
 import FrontDeskCheckin from '@/components/FrontDeskCheckin';
@@ -17,6 +18,7 @@ export default async function Page({ params }) {
   try {
     const session = await getAuthSession();
     if (!session) throw new Error('unauthenticated');
+    const employmentGroups = await getUserEmploymentGroups(session?.user);
 
     //------------------------------------------
     // HIDE AFTER TESTING
@@ -146,7 +148,10 @@ export default async function Page({ params }) {
             sessions={group.sessions}
             checkins={todayMemberCheckins ?? []}
           />
-          <FrontDeskCheckin sessions={group.sessions} />
+          <FrontDeskCheckin
+            sessions={group.sessions}
+            employmentGroups={employmentGroups}
+          />
         </div>
       </div>
     );
