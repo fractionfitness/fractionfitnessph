@@ -13,9 +13,9 @@ import {
 } from '@/components/ui-shadcn/Select';
 
 // using onValueChange prop in <Select> requires this to be a client component
-export default function SelectEmploymentGroups({ employmentGroups }) {
+export default function DashboardSelectGroups({ groups }) {
   const params = useParams();
-  const currentGroup = employmentGroups.filter(
+  const currentGroup = groups.filter(
     (group) => group.id === +params.groupId,
   )[0];
   const currentGroupName = currentGroup ? currentGroup.name : undefined;
@@ -30,8 +30,7 @@ export default function SelectEmploymentGroups({ employmentGroups }) {
       onValueChange={(e) => {
         // console.log('<Select> event', e);
         // groupId is not the same as params.groupId | since each SelectItem comps refers to the current user's employment groups (groupId) while params.groupId refers to the current group in the url params
-        const groupId = employmentGroups.filter((group) => group.name === e)[0]
-          .id;
+        const groupId = groups.filter((group) => group.name === e)[0].id;
         if (pathname.endsWith('/dashboard/group')) {
           redirect(`/dashboard/group/${groupId}`);
         } else if (pathname.endsWith(`/dashboard/group/${+params.groupId}`)) {
@@ -49,7 +48,7 @@ export default function SelectEmploymentGroups({ employmentGroups }) {
         <SelectGroup>
           <SelectLabel>Your Groups</SelectLabel>
           {/* try using value={group.id} */}
-          {employmentGroups.map((group) => (
+          {groups.map((group) => (
             <SelectItem
               className="focus:bg-background cursor-pointer"
               key={group.id}

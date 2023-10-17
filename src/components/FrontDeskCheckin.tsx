@@ -10,12 +10,12 @@ import {
 // import { useParams } from 'next/navigation';
 
 import { memberContent, employeeContent } from '@/config';
-import { cn } from '@/lib/utils';
+import { cn, convertTwoDatesToTimeInterval } from '@/lib/utils';
 import { useDebounce } from '@/hooks/use-debounce';
-import { convertTwoDatesToTimeInterval } from '@/lib/utils';
 import { searchMemberAction } from '@/actions/member';
 import { addMemberCheckin } from '@/actions/checkin';
-
+import { Icons } from '@/components/Icons';
+import { Button } from '@/components/ui-shadcn/Button';
 import {
   Card,
   CardContent,
@@ -25,24 +25,6 @@ import {
   CardTitle,
 } from '@/components/ui-shadcn/Card';
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui-shadcn/Select';
-// import {
-//   Form,
-//   FormControl,
-//   FormDescription,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from '@/components/ui-shadcn/Form';
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -51,16 +33,18 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui-shadcn/Command';
-import { Skeleton } from '@/components/ui-shadcn/Skeleton';
-// import {
-//   Popover,
-//   PopoverContent,
-//   PopoverTrigger,
-// } from '@/components/ui-shadcn/Popover';
-import { Button } from '@/components/ui-shadcn/Button';
-import { Icons } from '@/components/Icons';
 import { Input } from '@/components/ui-shadcn/Input';
 import { Label } from '@/components/ui-shadcn/Label';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui-shadcn/Select';
+import { Skeleton } from '@/components/ui-shadcn/Skeleton';
 
 function SelectSessions({ sessions, handleSelectSession }) {
   return (
@@ -71,7 +55,7 @@ function SelectSessions({ sessions, handleSelectSession }) {
         handleSelectSession(selectedSession);
       }}
     >
-      <Label htmlFor="select-session">Check-in for:</Label>
+      <Label htmlFor="select-session">Check in for:</Label>
       <SelectTrigger className={cn('min-w-full h-14')} id="select-session">
         <SelectValue
           placeholder="Select a Session to Check-in"
@@ -80,7 +64,7 @@ function SelectSessions({ sessions, handleSelectSession }) {
       </SelectTrigger>
       <SelectContent className="w-[348px] bg-secondary">
         <SelectGroup>
-          <SelectLabel>Today&apos;s Sessions</SelectLabel>
+          <SelectLabel>{"Today's Sessions"}</SelectLabel>
           {sessions.length > 0 &&
             sessions.map((item) => {
               const timeInterval = convertTwoDatesToTimeInterval([
@@ -119,10 +103,7 @@ function SearchSelectOneUserCommand({
   const hasValidQuery = Boolean(debouncedQuery.length > 0);
   const hasSearchResults = Boolean(searchResults.length > 0);
 
-  // const params = useParams();
-  // const groupId = +params.groudId;
-
-  const { userType, groupType, userRoles, userStatus } = userContent;
+  const { userType } = userContent;
 
   // reset query and inputValue to empty string when page reloads
   useEffect(() => {
@@ -305,16 +286,15 @@ function SearchSelectOneUserCommand({
   );
 }
 
-function CheckinCard({ mode, sessions }) {
+export default function FrontDeskCheckin({ sessions }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
-  const [pinInputState, setPinInputState] = useState(true);
+  const [pinInputState, setPinInputState] = useState(null);
   const userPinRef = useRef(null);
 
   const [isPending, startTransition] = useTransition();
 
-  const { userType, groupType, userRoles, userStatus } =
-    mode === 'member' ? memberContent : employeeContent;
+  const { userType, groupType, userRoles, userStatus } = memberContent;
   const userContent = { userType, groupType, userRoles, userStatus };
 
   const handleSelectSession = (selectedSession) => {
@@ -351,9 +331,9 @@ function CheckinCard({ mode, sessions }) {
   };
 
   return (
-    <Card className="w-[400px] bg-background text-foreground ">
+    <Card className="w-[400px] bg-background text-foreground">
       <CardHeader>
-        <CardTitle>{`${userType}`} Check-in</CardTitle>
+        <CardTitle>{`${userType}`} Check In</CardTitle>
         <CardDescription>Card description...</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -368,19 +348,16 @@ function CheckinCard({ mode, sessions }) {
         />
         <div className="flex flex-col space-y-1.5">
           <Label htmlFor="member-pin" className="text-left">
-            {`${userType} PIN`}
+            {`${userType} PIN: `}
           </Label>
+
           <div className="flex flex-row bg-secondary">
-            {/* <div className="m-auto">
-            <Icons.key className="" />
-          </div> */}
             <Input
               ref={userPinRef}
               required
               id="member-pin"
-              placeholder="Enter numerical code..."
+              placeholder="Enter PIN..."
               type="number"
-              // type="string"
               className={cn(
                 'max-w-sm ',
                 !pinInputState &&
@@ -394,14 +371,12 @@ function CheckinCard({ mode, sessions }) {
                 // 'after:appearance-textfield',
                 // 'after:[-webkit-appearance:none]',
               )}
-              onChange={(e) =>
-                console.log('onChange', userPinRef.current.value)
-              }
-              // onChange={(e) => console.log('onChange', e.target)}
+              // onChange={(e) => console.log('onChange', userPinRef.current.value)}
+              // onChange={(e) => console.log('onChange', e.target.value)}s
               // onInvalid={(e) => console.log('invalid event', e.target.value)}
-              onInvalidCapture={(e) =>
-                console.log('invalid capture event', e.target)
-              }
+              // onInvalidCapture={(e) =>
+              //   console.log('invalid capture event', e.target)
+              // }
               // these are not triggered in chrome | check again if same for edge and firefox
               onInputCapture={(e) => {
                 // <input> element, validity attribute, obj keys
@@ -436,7 +411,7 @@ function CheckinCard({ mode, sessions }) {
                   e.stopPropagation();
                 }
               }}
-            ></Input>
+            />
           </div>
         </div>
 
@@ -446,16 +421,9 @@ function CheckinCard({ mode, sessions }) {
           </p>
         )}
         <Button
-          // onClick={(e) =>
-          //   console.log({
-          //     session: selectedSession,
-          //     member: selectedUser,
-          //     pin: userPinRef.current.value,
-          //   })
-          // }
           onClick={handleSubmit}
           size="lg"
-          // disabled={!selectedSession || !selectedUser || !pinInputState}
+          disabled={!selectedSession || !selectedUser || !pinInputState}
           className="w-full"
         >
           {!isPending ? (
@@ -469,8 +437,4 @@ function CheckinCard({ mode, sessions }) {
       <CardFooter>Footer</CardFooter>
     </Card>
   );
-}
-
-export default function FrontDeskCheckin({ sessions }) {
-  return <CheckinCard mode="member" sessions={sessions} />;
 }
