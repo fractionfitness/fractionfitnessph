@@ -9,12 +9,14 @@ import {
 } from 'react';
 // import { useParams } from 'next/navigation';
 
-import { memberContent, employeeContent } from '@/config';
-import { cn, convertTwoDatesToTimeInterval } from '@/lib/utils';
+import { memberContent } from '@/config';
+import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/use-debounce';
 import { searchMemberAction } from '@/actions/member';
 import { addMemberCheckin } from '@/actions/checkin';
 import { Icons } from '@/components/Icons';
+import SelectSessions from '@/components/SelectSessions';
+
 import { Button } from '@/components/ui-shadcn/Button';
 import {
   Card,
@@ -35,58 +37,8 @@ import {
 } from '@/components/ui-shadcn/Command';
 import { Input } from '@/components/ui-shadcn/Input';
 import { Label } from '@/components/ui-shadcn/Label';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui-shadcn/Select';
 import { Skeleton } from '@/components/ui-shadcn/Skeleton';
-
-function SelectSessions({ sessions, handleSelectSession }) {
-  return (
-    <Select
-      onValueChange={(e) => {
-        // console.log('select', e);
-        const selectedSession = sessions.filter((item) => item.name === e)[0];
-        handleSelectSession(selectedSession);
-      }}
-    >
-      <Label htmlFor="select-session">Check in for:</Label>
-      <SelectTrigger className={cn('min-w-full h-14')} id="select-session">
-        <SelectValue
-          placeholder="Select a Session to Check-in"
-          className="mt-0"
-        />
-      </SelectTrigger>
-      <SelectContent className="w-[348px] bg-secondary">
-        <SelectGroup>
-          <SelectLabel>{"Today's Sessions"}</SelectLabel>
-          {sessions.length > 0 &&
-            sessions.map((item) => {
-              const timeInterval = convertTwoDatesToTimeInterval([
-                item.start_at,
-                item.end_at,
-              ]);
-              return (
-                <SelectItem
-                  key={item.id}
-                  value={item.name}
-                  // className="cursor-pointer py-2 px-2 focus:bg-background"
-                  className="cursor-pointer focus:bg-background"
-                >
-                  {`${timeInterval} ${item.group.name} ${item.name}`}
-                </SelectItem>
-              );
-            })}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-}
+import { Toggle } from '@/components/ui-shadcn/Toggle';
 
 function SearchSelectOneUserCommand({
   userContent,
@@ -290,17 +242,13 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [pinInputState, setPinInputState] = useState(null);
+  const [pinToggleShow, setPinToggleShow] = useState(false);
   const userPinRef = useRef(null);
 
   const [isPending, startTransition] = useTransition();
 
   const { userType, groupType, userRoles, userStatus } = memberContent;
   const userContent = { userType, groupType, userRoles, userStatus };
-
-  const handleSelectSession = (selectedSession) => {
-    // console.log('selecting session', selectedSession);
-    setSelectedSession(selectedSession);
-  };
 
   const handleSelectUser = (selectedUser) => {
     setSelectedUser(selectedUser);
@@ -312,9 +260,15 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
     //   user: selectedUser,
     //   pin: userPinRef && userPinRef.current.value,
     // });
-    startTransition(() =>
-      addMemberCheckin(selectedSession, selectedUser, userPinRef.current.value),
-    );
+
+    let pin = userPinRef?.current?.value;
+
+    // convert entered pin from text into a number
+    if (typeof pin === 'string') {
+      pin = Number(pin);
+    }
+
+    startTransition(() => addMemberCheckin(selectedSession, selectedUser, pin));
 
     // CONTINUE HERE | MUST FORM STATES
     // current sessions should be passed to FrontDeskCheckin | state lifted up from FrontDeskSessions(Rename to SessionsCheckins) to parent comp (FrontDesk) then passed to child component MemberCheckin
@@ -323,11 +277,16 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
     // setSelectedSession(default) => default=currentSessions[0]
 
     // setInputValue('');
-    // setQuery('');
-    // setSearchResults(null);
     setSelectedUser(null);
 
+    // these will be cleared when cmdInputValue is cleared
+    // setQuery('');
+    // setSearchResults(null);
+
+    // Reset/Clear PIN
+    setPinToggleShow(false);
     userPinRef.current.value = null;
+    setPinInputState(null);
   };
 
   return (
@@ -338,8 +297,11 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <SelectSessions
+          // sessions={sessions}
+          // handleSelectSession={handleSelectSession}
           sessions={sessions}
-          handleSelectSession={handleSelectSession}
+          setSelectedSession={setSelectedSession}
+          value={selectedSession?.name}
         />
         <SearchSelectOneUserCommand
           userContent={userContent}
@@ -347,20 +309,22 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
           selectedSession={selectedSession}
         />
         <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="member-pin" className="text-left">
+          <Label htmlFor="user-pin" className="text-left">
             {`${userType} PIN: `}
           </Label>
 
-          <div className="flex flex-row bg-secondary">
+          <div className="flex">
             <Input
               ref={userPinRef}
               required
-              id="member-pin"
+              id="user-pin"
               placeholder="Enter PIN..."
-              type="number"
+              type={pinToggleShow ? 'text' : 'password'}
+              pattern="[0-9]*"
+              maxLength={4}
               className={cn(
                 'max-w-sm ',
-                !pinInputState &&
+                pinInputState === false &&
                   'invalid:border-error invalid:text-error focus:invalid:border-error focus:invalid:ring-error',
                 // using arbitrary css properties for unavailable tailwind props
                 // '[-moz-appearance:textfield]',
@@ -392,15 +356,20 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
                   badInput,
                 } = e.target.validity;
 
-                if (badInput) {
+                // console.log('patternMismatch', patternMismatch);
+
+                if (badInput || patternMismatch) {
                   setPinInputState(false);
+                } else if (valueMissing) {
+                  setPinToggleShow(false);
+                  setPinInputState(null);
                 } else {
                   setPinInputState(true);
                 }
               }}
-              onWheel={(e) => {
-                userPinRef.current.blur();
-              }}
+              // onWheel={(e) => {
+              //   userPinRef.current.blur();
+              // }}
               onKeyDown={(e) => {
                 // e.code: will disregard case if alphabet key is pressed
                 //e.key: value is different for upper and lower case alphabet chars
@@ -412,10 +381,25 @@ export default function FrontDeskCheckin({ sessions, employmentGroups }) {
                 }
               }}
             />
+            <Toggle
+              size="sm"
+              disabled={userPinRef?.current?.value?.length > 0 ? false : true}
+              onPressedChange={(e) => {
+                // console.log('pinToggle before setState', pinToggleShow);
+                setPinToggleShow((s) => !s);
+              }}
+              pressed={pinToggleShow} // what's this for?
+            >
+              {pinToggleShow ? (
+                <Icons.eye className="h-5 w-5" />
+              ) : (
+                <Icons.eyeOff className="h-5 w-5" />
+              )}
+            </Toggle>
           </div>
         </div>
 
-        {!pinInputState && (
+        {pinInputState === false && (
           <p className="text-error">
             Please enter a valid PIN. Only numbers are allowed.
           </p>

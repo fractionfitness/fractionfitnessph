@@ -1,64 +1,67 @@
 'use client';
 
-import { redirect, useParams, usePathname } from 'next/navigation';
-
+import { useState, useEffect } from 'react';
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui-shadcn/Select';
+  // redirect,
+  useParams,
+  usePathname,
+  useRouter,
+} from 'next/navigation';
+
+import SelectGroups from '@/components/SelectGroups';
 
 // using onValueChange prop in <Select> requires this to be a client component
 export default function DashboardSelectGroups({ groups }) {
+  const router = useRouter();
   const params = useParams();
-  const currentGroup = groups.filter(
-    (group) => group.id === +params.groupId,
-  )[0];
-  const currentGroupName = currentGroup ? currentGroup.name : undefined;
+  const paramsGroupId = params.groupId ? +params.groupId : undefined;
+  const currentGroup = groups.filter((group) => group.id === paramsGroupId)[0];
+
+  const [selectedGroupId, setSelectedGroupId] = useState(paramsGroupId);
 
   const pathname = usePathname();
   const pathArray = pathname.split('/');
   const endingPath = pathArray[pathArray.length - 1];
 
-  // console.log('groupId for SelectEmploymentGroups client comp', params.groupId);
+  useEffect(() => {
+    if (
+      // checks if both url query param and selectedGroupId are undefined or are equal, then ends execution, otherwise redirect if a diff. group is selected
+      (typeof paramsGroupId === 'undefined' &&
+        typeof selectedGroupId === 'undefined') ||
+      selectedGroupId === paramsGroupId
+    ) {
+      return;
+    }
+    if (pathname.endsWith('/dashboard/group')) {
+      console.log('firing', console.log(selectedGroupId));
+      // redirect(`/dashboard/group/${selectedGroupId}`);
+      router.push(`/dashboard/group/${selectedGroupId}`);
+    } else if (pathname.endsWith(`/dashboard/group/${paramsGroupId}`)) {
+      console.log('firing', console.log(selectedGroupId));
+      // redirect(`/dashboard/group/${selectedGroupId}`);
+      router.push(`/dashboard/group/${selectedGroupId}`);
+    } else {
+      console.log('firing', console.log(selectedGroupId));
+      // redirect(`/dashboard/group/${selectedGroupId}/${endingPath}`);
+      router.push(`/dashboard/group/${selectedGroupId}/${endingPath}`);
+    }
+
+    // groups are the user's employment groups with selectedGroupId as the id, while params.groupId refers to the current group in the url params
+
+    // both redirect or router.push() works
+  }, [selectedGroupId, paramsGroupId, endingPath]);
+
   return (
-    <Select
-      onValueChange={(e) => {
-        // console.log('<Select> event', e);
-        // groupId is not the same as params.groupId | since each SelectItem comps refers to the current user's employment groups (groupId) while params.groupId refers to the current group in the url params
-        const groupId = groups.filter((group) => group.name === e)[0].id;
-        if (pathname.endsWith('/dashboard/group')) {
-          redirect(`/dashboard/group/${groupId}`);
-        } else if (pathname.endsWith(`/dashboard/group/${+params.groupId}`)) {
-          redirect(`/dashboard/group/${groupId}`);
-        } else {
-          redirect(`/dashboard/group/${groupId}/${endingPath}`);
+    <div className="w-[250px]">
+      <SelectGroups
+        groups={groups}
+        defaultValue={currentGroup?.name}
+        selectedGroup={groups.filter((g) => g.id === selectedGroupId)}
+        handleValueChange={(matchingGroup) =>
+          setSelectedGroupId(matchingGroup.id)
         }
-      }}
-      defaultValue={currentGroupName}
-    >
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Choose a group" />
-      </SelectTrigger>
-      <SelectContent className="bg-secondary">
-        <SelectGroup>
-          <SelectLabel>Your Groups</SelectLabel>
-          {/* try using value={group.id} */}
-          {groups.map((group) => (
-            <SelectItem
-              className="focus:bg-background cursor-pointer"
-              key={group.id}
-              value={group.name}
-            >
-              {group.name}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+        selectItemsHeader={`Your Group Employers:`}
+      />
+    </div>
   );
 }
