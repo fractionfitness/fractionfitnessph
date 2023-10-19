@@ -15,6 +15,7 @@ enum UserRole {
   USER
   DEV
   ADMIN
+  GUEST
 }
 
 enum EmployeeRole {
@@ -43,7 +44,7 @@ enum Day {
 // UserProfile 1?:1 Employees m?:1 Members m?:1 Group m?:1
 model User {
   id          Int          @id @default(autoincrement())
-  email       String       @unique
+  email       String?      @unique
   password    String?
   role        UserRole     @default(USER)
   profile     UserProfile?
@@ -63,6 +64,7 @@ model UserProfile {
   suffix_name String?
   full_name   String  @unique
   // choose either @@unique and @unique to implement since full_name is just computed | which is better?
+  pin         Int?    @db.UnsignedSmallInt
 
   // @@index(fields: [user_id]) // no need since already have a @unique constraint w/c creates an index
   // @unique on a computed value might not be allowed
@@ -77,13 +79,13 @@ model Group {
   profile   GroupProfile?
   employees Employee[]
   members   Member[]
-  parents   GroupRelation[] @relation(name: "child")
-  children  GroupRelation[] @relation(name: "parent")
+  parents   GroupRelation[] @relation(name: "Child")
+  children  GroupRelation[] @relation(name: "Parent")
   sessions  GroupSession[]
   owner     User            @relation(fields: [owner_id], references: [id])
   owner_id  Int
 
-  @@index([owner_id])
+  @@index(fields: [owner_id])
 }
 
 // Group 1:1
@@ -97,12 +99,15 @@ model GroupProfile {
 
 // User 1:m Group 1:m
 model Employee {
+  // add id field and remove composite id from Employee Model?
   // id       Int          @id @default(autoincrement())
-  user     User         @relation(fields: [user_id], references: [id])
+
+  user     User              @relation(fields: [user_id], references: [id])
   user_id  Int
-  group    Group        @relation(fields: [group_id], references: [id])
+  group    Group             @relation(fields: [group_id], references: [id])
   group_id Int
-  role     EmployeeRole @default(STAFF)
+  checkins EmployeeCheckin[]
+  role     EmployeeRole      @default(STAFF)
   // @@unique(fields: [user_id, group_id])
 
   @@id(fields: [user_id, group_id])
@@ -132,13 +137,13 @@ model Member {
 // Group (Parent) 1:m Group (Child) 1:m | m:m self-relation
 model GroupRelation {
   // id        Int   @id @default(autoincrement())
-  parent    Group @relation(name: "parent", fields: [parent_id], references: [id])
+  parent    Group @relation(name: "Parent", fields: [parent_id], references: [id])
   parent_id Int
-  child     Group @relation(name: "child", fields: [child_id], references: [id])
+  child     Group @relation(name: "Child", fields: [child_id], references: [id])
   child_id  Int
   // @@unique(fields: [parent_id, child_id])
 
-  @@id([parent_id, child_id])
+  @@id(fields: [parent_id, child_id])
   // need to index user and group ids individually?
   @@index(fields: [parent_id]) // still needed for faster queries?
   @@index(fields: [child_id]) // still needed for faster queries?
@@ -179,6 +184,7 @@ model MemberCheckin {
   // user_id Int
 
   datetime DateTime @default(now())
+  date     DateTime
 
   // why doesnt this work? maybe because now() also has a value for time while @db.Date() specifies only a value for date
   // date          DateTime @default(now()) @db.Date()
@@ -187,11 +193,32 @@ model MemberCheckin {
   // date DateTime @default(dbgenerated("CURDATE()")) @db.Date()
   // time DateTime @default(dbgenerated("CURTIME()")) @db.Time()
 
-  @@unique(fields: [session_id, member_id, datetime])
-  // need to index member and group ids individually?
+  @@unique(fields: [session_id, member_id, date])
+  // need to index member and session ids individually?
   @@index(fields: [session_id]) // still needed?
   @@index(fields: [member_id])
-  @@index(fields: [datetime]) // needed for faster queries when searching checkins per day?
+  @@index(fields: [date]) // needed for faster queries when searching checkins per day?
 }
 
-// add Holidays/Day-offs/CancelledSessions Model
+// GroupSession 1:m Members 1:m
+model EmployeeCheckin {
+  id         Int      @id @default(autoincrement())
+  employee   Employee @relation(fields: [user_id, group_id], references: [user_id, group_id])
+  user_id    Int
+  group_id   Int
+  checked_in DateTime @default(now())
+
+  // no UI for employee check out yet
+  // checked_out DateTime
+
+  date DateTime // still includes the time because of timezone offsets (although the same values for all employee checkins for the day e.g. 2023-10-16T16:00:00.000Z) | still needed to ensure only one checkin per employee per day
+
+  @@unique(fields: [user_id, group_id, date])
+  // need to index employee and group ids individually?
+  @@index(fields: [user_id, group_id])
+  @@index(fields: [user_id])
+  @@index(fields: [group_id])
+  @@index(fields: [date]) // needed for faster queries when searching checkins per day?
+}
+
+// add Holidays/Day-offs/CancelledSessions Model?

@@ -1,4 +1,4 @@
-import SelectEmploymentGroups from '@/components/SelectEmploymentGroups';
+import DashboardSelectGroups from '@/components/DashboardSelectGroups';
 import { getAuthSession } from '@/lib/auth';
 import getUserEmploymentGroups from '@/lib/prismaQueries/getUserEmploymentGroups';
 
@@ -14,7 +14,7 @@ export default async function Template({
     <>
       <div className="flex flex-row items-center">
         <p>Dashboard: </p>&nbsp;
-        <SelectEmploymentGroups employmentGroups={employmentGroups} />
+        <DashboardSelectGroups groups={employmentGroups} />
       </div>
       {children}
     </>

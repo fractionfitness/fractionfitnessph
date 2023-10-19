@@ -562,7 +562,7 @@ jobs:
         id: db_push
         run: |
           export DATABASE_URL=$(cat ./branch-conn-string.txt)
-          DATABASE_URL="${DATABASE_URL}" npx prisma db push
+          DATABASE_URL="${DATABASE_URL}" npx prisma db push --accept-data-loss
       #-------------------------------------------------------------------------------------
 
   # only executes when Pscale DB needs to be reset (prisma db seed) during the ff. cases:

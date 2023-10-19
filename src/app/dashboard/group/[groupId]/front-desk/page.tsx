@@ -2,13 +2,14 @@ import { getAuthSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import {
   addOneDayToDateObj,
-  convertDateObjValuesToStringValues,
-  // compareDateObjToSessionDay,
-  didDateOccurInASpecific24HourPeriod,
   cn,
+  convertDateObjValuesToStringValues,
   getJsDateObjValues,
   sortDates,
+  // compareDateObjToSessionDay,
+  // didDateOccurInASpecific24HourPeriod,
 } from '@/lib/utils';
+import getUserEmploymentGroups from '@/lib/prismaQueries/getUserEmploymentGroups';
 
 import FrontDeskSessions from '@/components/FrontDeskSessions';
 import FrontDeskCheckin from '@/components/FrontDeskCheckin';
@@ -17,6 +18,7 @@ export default async function Page({ params }) {
   try {
     const session = await getAuthSession();
     if (!session) throw new Error('unauthenticated');
+    const employmentGroups = await getUserEmploymentGroups(session?.user);
 
     //------------------------------------------
     // HIDE AFTER TESTING
@@ -35,26 +37,26 @@ export default async function Page({ params }) {
 
     const origDateValues = getJsDateObjValues(todaysDate);
 
-    console.log(
-      'filter condition check ===>',
-      'today obj values: ',
-      origDateValues,
-      '\n',
-      'interval:',
-      todaysDate,
-      '-',
-      addOneDayToDateObj(todaysDate),
-      ' | ',
-      // '2023-07-31T18:50:16.664Z',
-      // '2023-08-01T07:15:32.476Z',
-      'checkin in interval?',
-      todaysDate <= new Date('2023-08-10T15:00:00.000Z') &&
-        new Date('2023-08-09T15:00:00.000Z') < addOneDayToDateObj(todaysDate),
-      didDateOccurInASpecific24HourPeriod(
-        new Date('2023-08-09T16:00:00.000Z'),
-        todaysDate,
-      ),
-    );
+    // console.log(
+    //   'filter condition check ===>',
+    //   'today obj values: ',
+    //   origDateValues,
+    //   '\n',
+    //   'interval:',
+    //   todaysDate,
+    //   '-',
+    //   addOneDayToDateObj(todaysDate),
+    //   ' | ',
+    //   // '2023-07-31T18:50:16.664Z',
+    //   // '2023-08-01T07:15:32.476Z',
+    //   'checkin in interval?',
+    //   todaysDate <= new Date('2023-08-10T15:00:00.000Z') &&
+    //     new Date('2023-08-09T15:00:00.000Z') < addOneDayToDateObj(todaysDate),
+    //   didDateOccurInASpecific24HourPeriod(
+    //     new Date('2023-08-09T16:00:00.000Z'),
+    //     todaysDate,
+    //   ),
+    // );
 
     // old query
     // const group = await prisma.group.findFirst({
@@ -131,11 +133,11 @@ export default async function Page({ params }) {
       'desc',
     );
 
-    console.log(
-      'group',
-      group.sessions.map((item) => item.member_checkins),
-    );
-    console.log('query group checkins====>', todayMemberCheckins);
+    // console.log(
+    //   'group',
+    //   group.sessions.map((item) => item.member_checkins),
+    // );
+    // console.log('query group checkins====>', todayMemberCheckins);
 
     return (
       <div>
@@ -146,7 +148,10 @@ export default async function Page({ params }) {
             sessions={group.sessions}
             checkins={todayMemberCheckins ?? []}
           />
-          <FrontDeskCheckin sessions={group.sessions} />
+          <FrontDeskCheckin
+            sessions={group.sessions}
+            employmentGroups={employmentGroups}
+          />
         </div>
       </div>
     );
