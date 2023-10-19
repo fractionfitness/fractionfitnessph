@@ -41,6 +41,19 @@ export async function searchMemberAction(
   return matchingMembers;
 }
 
+export async function addUserToGroupMembershipAction(
+  user,
+  groupId,
+  paramsGroupId,
+) {
+  const result = await prisma.member.create({
+    data: { user_id: user.id, group_id: groupId },
+  });
+
+  revalidatePath(`dashboard/group/${paramsGroupId}/front-desk`);
+  // return result;
+}
+
 export async function addUsersToGroupMembershipAction(usersToAdd, groupId) {
   const members = usersToAdd.map((user) => ({
     user_id: user.id,
