@@ -5,32 +5,22 @@ import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
 import { convertToMysqlDateString } from '@/lib/utils';
 
-//  handleSelectUser({
-//   id,
-//   user_id,
-//   group_id,
-//   role,
-//   full_name,
-//   email,
-// })
-// addMemberCheckin(selectedSession, selectedUser, userPinRef.current.value)
 export async function addMemberCheckin(session, member, pin) {
-  // add pin check here
+  // impossible to get non-existent user since only group members are sent as an argument to the action, so no need to query user
   // const user = prisma.user.findFirst({ where: { id: session.user_id } });
-  // // impossible to get non-existent user since only group members are sent as an argument to the action
-  // if (user && user.pin === pin) throw new Error('user account non-existent / wrong pin')
 
   try {
-    // console.log('member', member);
-    const matchingUser = await prisma.user.findUnique({
+    // let start = performance.now();
+    const matchingUserProfile = await prisma.userProfile.findUnique({
       where: {
-        id: member.user_id,
+        user_id: member.user_id,
       },
-      include: { profile: true },
     });
-    // console.log('matchingUser', matchingUser);
+    // console.log('matchingUserProfile', matchingUserProfile);
+    // let end = performance.now();
+    // console.log(`find user: ${end - start} ms`);
 
-    if (matchingUser?.profile?.pin !== pin) {
+    if (matchingUserProfile?.pin !== pin) {
       // Can't return an error object from server actions
       // Error: Warning: Only plain objects can be passed to Client Components from Server Components. Error objects are not supported.
       // return new Error("PIN doesn't match");
@@ -38,15 +28,18 @@ export async function addMemberCheckin(session, member, pin) {
       throw new Error("PIN doesn't match");
     }
 
-    const checkin = await prisma.memberCheckin.create({
+    // start = performance.now();
+    const memberCheckin = await prisma.memberCheckin.create({
       data: {
         session_id: session.id,
         member_id: member.id,
         date: convertToMysqlDateString(new Date()),
       },
     });
+    // end = performance.now();
+    // console.log(`memberCheckin exec time: ${end - start} ms`);
 
-    // return checkin;
+    // return memberCheckin;
 
     // need to pass the current path if you want to have a dyhnamic path to revalidate
     // currently, this action won't revalidate other pages, when used by a client component in that page
@@ -59,35 +52,35 @@ export async function addMemberCheckin(session, member, pin) {
 }
 
 export async function addEmployeeCheckin(employee, pin) {
-  // add pin check here
-
-  // console.log('addEmployeeCheckin args', employee, pin);
-
   try {
-    const matchingUser = await prisma.user.findUnique({
+    let start = performance.now();
+    const matchingUserProfile = await prisma.userProfile.findUnique({
       where: {
         id: employee.user_id,
       },
-      include: { profile: true },
     });
+    let end = performance.now();
+    console.log(`find user: ${end - start} ms`);
 
-    if (matchingUser?.profile?.pin !== pin) {
+    if (matchingUserProfile?.pin !== pin) {
       // Can't return an error object from server actions
       // Error: Warning: Only plain objects can be passed to Client Components from Server Components. Error objects are not supported.
       // return new Error("PIN doesn't match");
       throw new Error("PIN doesn't match");
     }
 
-    // console.log('Date now', convertToMysqlDateString(new Date()));
-
-    const checkin = await prisma.employeeCheckin.create({
+    // start = performance.now();
+    const employeeCheckin = await prisma.employeeCheckin.create({
       data: {
         group_id: employee.group_id,
         user_id: employee.user_id,
         date: convertToMysqlDateString(new Date()),
       },
     });
-    // return checkin;
+    // end = performance.now();
+    // console.log(`employeeCheckin: ${end - start} ms`);
+
+    // return employeeCheckin;
 
     // use revalidatePath if no need to handle error/success states, client-side, after executing server action
     revalidatePath(`dashboard/group/${employee.group_id}/front-desk`);
