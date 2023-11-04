@@ -49,7 +49,7 @@ export default async function Page({}) {
     return (
       <div>
         <hr />
-        <p>Sessions</p>
+        <p>Check Ins</p>
         <div className="flex flex-row space-x-1">
           <p>Filter by:</p>
           <p>Period</p>

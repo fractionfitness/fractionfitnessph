@@ -1,6 +1,7 @@
 'use client';
 
 import { FC } from 'react';
+import { usePathname } from 'next/navigation';
 // import { User } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
@@ -22,6 +23,8 @@ import { Icons } from './Icons';
 // const NavAccount: FC<NavAccountProps> = ({ user }) => {
 const NavAccount: FC = ({ user }) => {
   // console.log('user====>', user);
+  const pathname = usePathname();
+  console.log('pathname', pathname);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
@@ -64,7 +67,7 @@ const NavAccount: FC = ({ user }) => {
           onSelect={(e) => {
             e.preventDefault();
             signOut({
-              callbackUrl: `${window.location.origin}/api/auth/signin?callbackUrl=/dashboard/user`,
+              callbackUrl: `${window.location.origin}/api/auth/signin?callbackUrl=${pathname}`,
             });
           }}
         >

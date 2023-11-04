@@ -11,7 +11,7 @@ import LogoAvatar from './LogoAvatar';
 import { Icons } from '@/components/Icons';
 import NavAccount from './NavAccount';
 
-export default function Header() {
+export default function Header({ userEmployments }) {
   const currentUrl = usePathname();
   const { data: session, status } = useSession();
 
@@ -43,13 +43,13 @@ export default function Header() {
             </li>
           )} */}
           {/* ----------------delete this after------------------- */}
-
+          {/*
           {session && currentUrl === '/' && (
             <li className={cn(styles.links, 'hover:text-foreground')}>
               <Link href={'/dashboard/user'}>UserDash</Link>
             </li>
-          )}
-          {session && currentUrl === '/' && (
+          )} */}
+          {session && currentUrl === '/' && userEmployments.length > 0 && (
             <li className={cn(styles.links, 'hover:text-foreground')}>
               <Link href={'/dashboard/group'}>GroupDash</Link>
             </li>
