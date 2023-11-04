@@ -43,12 +43,12 @@ export default function Header() {
             </li>
           )} */}
           {/* ----------------delete this after------------------- */}
-
+          {/*
           {session && currentUrl === '/' && (
             <li className={cn(styles.links, 'hover:text-foreground')}>
               <Link href={'/dashboard/user'}>UserDash</Link>
             </li>
-          )}
+          )} */}
           {session && currentUrl === '/' && (
             <li className={cn(styles.links, 'hover:text-foreground')}>
               <Link href={'/dashboard/group'}>GroupDash</Link>
