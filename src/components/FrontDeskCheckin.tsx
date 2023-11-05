@@ -302,7 +302,7 @@ function NewAccountCard({
                       addUserToGroupMembershipAction(
                         selectedUser,
                         selectedGroup.id,
-                        +params.groupId,
+                        `dashboard/group/${+params.groupId}/front-desk`,
                       ),
                     )
                   }

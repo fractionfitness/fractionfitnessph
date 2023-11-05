@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import prisma from '@/lib/prisma';
+import { MemberStatus } from '@prisma/client';
 
 // temporary solution for the member search bar
 // members should just be passed to the checkin component beforehand and just a filter function on the array
@@ -44,13 +45,16 @@ export async function searchMemberAction(
 export async function addUserToGroupMembershipAction(
   user,
   groupId,
-  paramsGroupId,
+  // paramsGroupId,
+  pathToRevalidate,
+  status: MemberStatus = MemberStatus.ACTIVE,
 ) {
   const result = await prisma.member.create({
-    data: { user_id: user.id, group_id: groupId },
+    data: { user_id: user.id, group_id: groupId, status },
   });
 
-  revalidatePath(`dashboard/group/${paramsGroupId}/front-desk`);
+  // revalidatePath(`dashboard/group/${paramsGroupId}/front-desk`);
+  revalidatePath(pathToRevalidate);
   // return result;
 }
 
@@ -88,7 +92,7 @@ export async function editMemberAction(
       where: { id },
       data: {
         role,
-        // status
+        status,
       },
     });
     revalidatePath(`/dashboard/group/${group_id}/members`);

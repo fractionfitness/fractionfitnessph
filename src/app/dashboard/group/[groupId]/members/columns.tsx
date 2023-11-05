@@ -3,8 +3,8 @@
 import { ColumnDef } from '@tanstack/react-table';
 
 import { MemberRole, MemberStatus } from '@prisma/client';
-import { memberContent } from '@/config';
 import { editMemberAction, removeMemberAction } from '@/actions/member';
+import { capitalizeAllWords } from '@/lib/utils';
 import { Icons } from '@/components/Icons';
 import { Button } from '@/components/ui-shadcn/Button';
 import {
@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui-shadcn/Tooltip';
 import GroupUserOptions from '@/components/GroupUserOptions';
+import { cn } from '@/lib/utils';
 
 export type Member = {
   name: string;
@@ -29,7 +30,7 @@ export type Member = {
   user_id: number;
   group_id: number;
   id: number;
-  // status: MemberStatus
+  status: MemberStatus;
 };
 
 export const columns: ColumnDef<Member>[] = [
@@ -113,6 +114,35 @@ export const columns: ColumnDef<Member>[] = [
     header: () => <div className="text-center">Email</div>,
   },
   {
+    accessorKey: 'status',
+    header: () => <div className="text-center">Status</div>,
+    cell: ({ row }) => {
+      const status: Member['status'] = row.getValue('status');
+      const statusColor =
+        status === 'PENDING_GROUP_APPROVAL'
+          ? 'text-yellow-500'
+          : status === 'INACTIVE'
+          ? 'text-error'
+          : '';
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" className={cn(statusColor)}>
+                {status.charAt(0)}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className={cn(statusColor)}>
+                {capitalizeAllWords(status.replace(/_/g, ' '))}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    },
+  },
+  {
     id: 'actions',
     cell: ({ row }) => {
       // console.log('row.original ===>', row.original.name);
@@ -123,7 +153,8 @@ export const columns: ColumnDef<Member>[] = [
           groupUser={row.original}
           roles={Object.keys(MemberRole)}
           statuses={
-            MemberStatus ? Object.keys(MemberStatus) : memberContent.userStatus
+            // MemberStatus ? Object.keys(MemberStatus) : memberContent.userStatus
+            Object.keys(MemberStatus)
           }
           editUser={editMemberAction}
           removeUser={removeMemberAction}

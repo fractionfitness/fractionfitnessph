@@ -21,7 +21,7 @@ export default withAuth(
       req.nextUrl.pathname.startsWith('/register'); // if we use this, user cannot create a 2nd account, unless they sign out
 
     // currently not working | most likely because we are using next-auth's prebuilt signin page and not using our own
-    console.log('isAuthRoute', isAuthRoute);
+    // console.log('isAuthRoute', isAuthRoute);
     if (isAuthRoute) {
       if (isAuth) {
         // return NextResponse.redirect(new URL('/dashboard/user', req.url));

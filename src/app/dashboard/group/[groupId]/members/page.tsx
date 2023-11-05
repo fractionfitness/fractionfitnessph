@@ -37,7 +37,7 @@ export default async function UserGroups({ params: { groupId } }) {
     // }));
 
     const groupMembers: MemberColumns[] = group?.members.map(
-      ({ user, role, id }) => ({
+      ({ user, role, id, status }) => ({
         id, // member id
         name: user.profile?.full_name!,
         email: user.email,
@@ -45,7 +45,7 @@ export default async function UserGroups({ params: { groupId } }) {
         user_id: user.id,
         group_id: group.id,
         role,
-        // status,
+        status,
       }),
     )!;
 

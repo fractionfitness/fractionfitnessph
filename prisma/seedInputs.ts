@@ -5,6 +5,7 @@ import { faker } from '@faker-js/faker';
 import { hash } from 'bcrypt';
 
 import { generateRandomDateTimeObj } from './seedUtils';
+import { memberContent } from '@/config';
 
 const p = path.join(
   path.dirname(require.main.filename),
@@ -385,11 +386,13 @@ async function generateFakeModelDataArrays() {
       let dbRecords = [];
       users.forEach((user) => {
         if (faker.helpers.maybe(() => true, { probability: 0.35 })) {
+          const memberStatus = memberContent.userStatus;
           const member = {
             // better to make Member pk (id) a composite of user_id and group_id, in the same manner as Employments?
             id: idCount++,
             user_id: user.id,
             group_id: item.id,
+            status: faker.helpers.arrayElement(memberStatus),
           };
           dbRecords.push(member);
         }
