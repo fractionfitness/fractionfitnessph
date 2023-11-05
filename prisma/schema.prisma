@@ -31,6 +31,13 @@ enum MemberRole {
   VISITOR
 }
 
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_GROUP_APPROVAL
+  // PENDING_USER_APPROVAL // only implement in app v2 after most fraction members are already using app and it is stable
+}
+
 enum Day {
   SUNDAY
   MONDAY
@@ -126,6 +133,7 @@ model Member {
   group_id Int
   checkins MemberCheckin[]
   role     MemberRole      @default(MEMBER)
+  status   MemberStatus    @default(ACTIVE)
 
   // @@id(fields: [user_id, group_id])
   @@unique(fields: [user_id, group_id])

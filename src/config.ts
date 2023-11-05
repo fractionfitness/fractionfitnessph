@@ -52,7 +52,9 @@ export const memberContent = {
   userStatus: [
     'ACTIVE',
     'INACTIVE',
-    'BANNED',
+    'PENDING_GROUP_APPROVAL',
+    // 'PENDING_USER_APPROVAL'
+    // 'BANNED',
     // 'SABBATICAL',
     // 'INJURED',
     // 'PAST DUE',
