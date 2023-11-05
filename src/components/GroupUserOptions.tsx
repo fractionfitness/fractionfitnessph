@@ -2,16 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { Popover, PopoverContent, PopoverTrigger } from './ui-shadcn/Popover';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui-shadcn/Select';
+import { memberContent, employeeContent } from '@/config';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +14,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui-shadcn/AlertDialog';
-import { Label } from './ui-shadcn/Label';
-import { Button } from './ui-shadcn/Button';
+import { Button } from '@/components/ui-shadcn/Button';
 import { Icons } from '@/components/Icons';
-import { memberContent, employeeContent } from '@/config';
+import { Label } from '@/components/ui-shadcn/Label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui-shadcn/Popover';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui-shadcn/Select';
 
 function SelectOptions({
   id,
