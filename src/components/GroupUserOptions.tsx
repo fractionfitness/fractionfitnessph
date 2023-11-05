@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { memberContent, employeeContent } from '@/config';
+import { capitalizeAllWords } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,8 +55,8 @@ function SelectOptions({
             {items.map((item) => {
               return (
                 <SelectItem key={item} value={item} className="cursor-pointer">
-                  {/* need to manipulate string so that capitalization will be consistent with SelectItem value prop */}
-                  {item.charAt(0) + item.slice(1, item.length).toLowerCase()}
+                  {/* need to manipulate string so that capitalization will be consistent with SelectItem value prop | value should not be mutated */}
+                  {capitalizeAllWords(item.replace(/_/g, ' '))}
                 </SelectItem>
               );
             })}
@@ -108,16 +109,15 @@ export default function GroupUserOptions({
   editUser,
   removeUser,
 }) {
-  // remove const DEFAULT_USER_STATUS after adding status field to Employee/Member model
-  const DEFAULT_USER_STATUS = statuses[0];
-
   // const [selectedRole, setSelectedRole] = useState('');
   // const [selectedStatus, setSelectedStatus] = useState('');
   // better to use useRef than useState
   const roleRef = useRef(null);
   const statusRef = useRef(null);
-  const selectedRole = roleRef.current;
-  const selectedStatus = statusRef.current;
+
+  // this doesn't work because changing roleRef.current/statusRef.current will not necessarily update selectedRole and selectedStatus since they are only set every comp render | reassignment of refs do not cause comp render
+  // const selectedRole = roleRef.current;
+  // const selectedStatus = statusRef.current;
 
   const popoverBtnRef = useRef(null);
 
@@ -134,7 +134,11 @@ export default function GroupUserOptions({
     // popoverBtnRef.current.disabled = false;
     setPopoverBtnStatus(true);
     setEditButtonStatus(false);
-  }, [groupUser]);
+
+    // initialize role and status refs
+    roleRef.current = groupUser.role;
+    statusRef.current = groupUser.status;
+  }, [groupUser.role, groupUser.status]); // if you only specify groupUser, effect may not rerun
 
   const handleRoleChange = (e) => {
     // console.log('handleRoleChange', e);
@@ -150,8 +154,7 @@ export default function GroupUserOptions({
     // console.log('handleStatusChange', e);
     // setSelectedStatus(e);
     statusRef.current = e;
-    // remove ?? DEFAULT_USER_STATUS after adding status field to Employee/Member model
-    if (groupUser.status ?? DEFAULT_USER_STATUS === e) {
+    if (groupUser.status === e) {
       setEditButtonStatus(false);
     } else {
       setEditButtonStatus(true);
@@ -160,7 +163,7 @@ export default function GroupUserOptions({
 
   const handleEditUser = (e) => {
     // throw new Error('client-side error');
-    editUser(groupUser, selectedRole, selectedStatus);
+    editUser(groupUser, roleRef.current, statusRef.current);
     setEditButtonStatus(false);
 
     // close popover
@@ -228,8 +231,7 @@ export default function GroupUserOptions({
                 id="status"
                 items={statuses}
                 placeholder={`${userType} Status`}
-                // remove ?? DEFAULT_USER_STATUS after adding status field to Employee/Member model
-                defaultValue={groupUser.status ?? DEFAULT_USER_STATUS}
+                defaultValue={groupUser.status}
                 handleSelectChange={handleStatusChange}
               />
             </div>
